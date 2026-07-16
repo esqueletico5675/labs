@@ -1,0 +1,19 @@
+{
+  "name": "Mi Taller — Recordatorios de mantenimiento",
+  "short_name": "Mi Taller",
+  "description": "Consulta el estado de mantenimiento de tus vehículos.",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "background_color": "#f2f4f7",
+  "theme_color": "#1a3a5c",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "icono.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

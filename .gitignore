@@ -1,0 +1,22 @@
+# Entorno virtual de Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Base de datos local (SQLite)
+*.db
+
+# Variables de entorno con secretos
+.env
+
+# Llaves privadas de notificaciones push (¡nunca al repositorio!)
+llaves_push.json
+
+# Archivos del sistema / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Estado local de sesión de Claude Code (permisos, locks)
+.claude/
