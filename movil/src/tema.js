@@ -2,29 +2,52 @@
 //  TEMA — el sistema de diseño de la app (una sola fuente de verdad)
 // ============================================================
 // Regla de oro: NINGUNA pantalla inventa colores ni tamaños.
-// Rediseño v2: tema CLARO y amigable. Fondo suave, tarjetas blancas
-// con sombra, colores de estado con su versión "pastel" de fondo.
-// Se lee mejor a pleno sol (¡en un taller!) y se siente cercano.
+// v3: DOS paletas (clara y oscura). El usuario elige en Ajustes y
+// toda la app se repinta sola, porque todo sale de aquí.
 
-export const COLORES = {
-  fondo: '#eef2f7',        // gris azulado muy suave (no blanco puro: cansa menos)
-  tarjeta: '#ffffff',      // tarjetas blancas
-  borde: '#e2e8f0',        // bordes casi invisibles
-  texto: '#0f172a',        // texto principal (azul casi negro)
-  textoSuave: '#64748b',   // texto secundario
-  primario: '#2563eb',     // azul de acción (botones, enlaces)
-  primarioOscuro: '#1e40af', // azul de la cabecera
-  primarioSuave: '#dbeafe',  // fondo azul pastel
+export const PALETAS = {
+  // --- MODO CLARO: amigable, se lee bien a pleno sol ---
+  claro: {
+    fondo: '#eef2f7',        // gris azulado muy suave
+    tarjeta: '#ffffff',
+    borde: '#e2e8f0',
+    texto: '#0f172a',
+    textoSuave: '#64748b',
+    primario: '#2563eb',
+    primarioOscuro: '#1e40af', // cabecera azul
+    primarioSuave: '#dbeafe',
 
-  // Estados: color fuerte (texto/íconos) + fondo pastel (superficies).
-  // Elegidos con contraste AA sobre blanco y distinguibles con daltonismo.
-  alDia: '#047857',    alDiaFondo: '#d1fae5',
-  proximo: '#b45309',  proximoFondo: '#fef3c7',
-  vencido: '#dc2626',  vencidoFondo: '#fee2e2',
+    // Estados: color fuerte (texto/íconos) + fondo pastel (superficies).
+    alDia: '#047857',    alDiaFondo: '#d1fae5',
+    proximo: '#b45309',  proximoFondo: '#fef3c7',
+    vencido: '#dc2626',  vencidoFondo: '#fee2e2',
 
-  placaFondo: '#fbbf24',   // amarillo placa colombiana
-  placaTexto: '#111827',
-  blanco: '#ffffff',
+    placaFondo: '#fbbf24',
+    placaTexto: '#111827',
+    blanco: '#ffffff',
+  },
+
+  // --- MODO OSCURO: para la noche y para ahorrar batería ---
+  oscuro: {
+    fondo: '#10161f',        // azul casi negro (el del portal)
+    tarjeta: '#1a2230',
+    borde: '#2a3648',
+    texto: '#f1f5f9',
+    textoSuave: '#94a3b8',
+    primario: '#3b82f6',
+    primarioOscuro: '#1e40af',
+    primarioSuave: '#1e3a5f',
+
+    // Mismos estados, versión para fondo oscuro: texto más brillante,
+    // fondo del color pero bien apagado.
+    alDia: '#34d399',    alDiaFondo: '#0b3b2e',
+    proximo: '#fbbf24',  proximoFondo: '#42300a',
+    vencido: '#f87171',  vencidoFondo: '#4c1717',
+
+    placaFondo: '#fbbf24',   // la placa es amarilla en cualquier mundo
+    placaTexto: '#111827',
+    blanco: '#ffffff',
+  },
 };
 
 // Sombra suave estándar de todas las tarjetas (elevation es la de Android).
@@ -58,34 +81,41 @@ export const ALTO_TOQUE = 54;
 // ============================================================
 //  Los 3 estados, en LENGUAJE COTIDIANO.
 // ============================================================
-// El backend dice "vencido / proximo / al_dia". El cliente ve color +
-// ícono + nombre + LA ACCIÓN a tomar. Nunca un color solo.
+// Lo fijo (ícono, nombre, acción, orden) vive aquí; el color depende
+// de la paleta activa y se obtiene con infoEstado(estado, colores).
 export const ESTADOS = {
   vencido: {
-    color: COLORES.vencido,
-    fondo: COLORES.vencidoFondo,
     icono: '🔴',
     nombre: 'Necesita taller',
     accion: 'Pide tu cita ya',
     orden: 0, // el más urgente primero
   },
   proximo: {
-    color: COLORES.proximo,
-    fondo: COLORES.proximoFondo,
     icono: '🟠',
     nombre: 'Revisar pronto',
     accion: 'Agenda con calma esta semana',
     orden: 1,
   },
   al_dia: {
-    color: COLORES.alDia,
-    fondo: COLORES.alDiaFondo,
     icono: '🟢',
     nombre: 'Todo al día',
     accion: 'No tienes que hacer nada',
     orden: 2,
   },
 };
+
+// Junta lo fijo del estado con los colores de la paleta activa.
+const CLAVES_COLOR = {
+  vencido: ['vencido', 'vencidoFondo'],
+  proximo: ['proximo', 'proximoFondo'],
+  al_dia: ['alDia', 'alDiaFondo'],
+};
+
+export function infoEstado(estado, colores) {
+  const clave = ESTADOS[estado] ? estado : 'al_dia';
+  const [c, f] = CLAVES_COLOR[clave];
+  return { ...ESTADOS[clave], color: colores[c], fondo: colores[f] };
+}
 
 // Ícono según el nombre del mantenimiento: se reconoce sin leer.
 export function iconoMantenimiento(nombre) {

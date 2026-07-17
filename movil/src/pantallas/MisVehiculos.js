@@ -2,21 +2,25 @@
 //  PANTALLA: Mis vehículos (la pantalla principal)
 // ============================================================
 // Responde UNA pregunta en 3 segundos: "¿mi carro está bien o no?"
-// Look v2: cabecera azul con el resumen en una frase, y una tarjeta
-// blanca por carro con su placa, su estado y qué hacer.
+// Cabecera azul con el resumen en una frase, y una tarjeta por carro
+// con su placa, su estado y qué hacer. v3: soporta claro/oscuro.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import * as api from '../api';
+import { useTema } from '../apariencia';
 import { BandaEstado, CajaError, Cargando, Placa, Tarjeta } from '../componentes';
 import { useSesion } from '../sesion';
-import { COLORES, ESPACIO, LETRA, RADIO, peorEstado } from '../tema';
+import { ESPACIO, LETRA, RADIO, peorEstado } from '../tema';
 
 export default function MisVehiculos({ navigation }) {
   const { token, salir } = useSesion();
+  const { colores } = useTema();
+  const estilos = useMemo(() => crearEstilos(colores), [colores]);
+
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState(null);
   const [refrescando, setRefrescando] = useState(false);
@@ -73,13 +77,13 @@ export default function MisVehiculos({ navigation }) {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: COLORES.fondo }}
+      style={{ flex: 1, backgroundColor: colores.fondo }}
       contentContainerStyle={estilos.contenido}
       refreshControl={
         <RefreshControl
           refreshing={refrescando}
           onRefresh={alRefrescar}
-          tintColor={COLORES.primario}
+          tintColor={colores.primario}
         />
       }
     >
@@ -171,69 +175,72 @@ function primerNombre(nombreCompleto) {
   return (nombreCompleto || '').trim().split(' ')[0] || 'cliente';
 }
 
-const estilos = StyleSheet.create({
-  contenido: {
-    padding: ESPACIO.m,
-    paddingBottom: ESPACIO.xl,
-  },
-  cabecera: {
-    backgroundColor: COLORES.primarioOscuro,
-    borderRadius: RADIO.tarjeta,
-    padding: ESPACIO.l,
-    marginBottom: ESPACIO.m,
-  },
-  saludo: {
-    color: COLORES.blanco,
-    fontSize: LETRA.titulo,
-    fontWeight: '800',
-  },
-  taller: {
-    color: '#bfdbfe',
-    fontSize: LETRA.pequena,
-    marginTop: 2,
-  },
-  resumen: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: ESPACIO.s,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderRadius: RADIO.campo,
-    padding: ESPACIO.m,
-    marginTop: ESPACIO.m,
-  },
-  resumenTexto: {
-    color: COLORES.blanco,
-    fontSize: LETRA.normal,
-    fontWeight: '600',
-    flex: 1,
-    lineHeight: 22,
-  },
-  filaSuperior: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  flecha: {
-    color: COLORES.textoSuave,
-    fontSize: 34,
-    fontWeight: '300',
-  },
-  marca: {
-    color: COLORES.textoSuave,
-    fontSize: LETRA.normal,
-    marginTop: ESPACIO.s,
-    marginBottom: ESPACIO.m,
-  },
-  pista: {
-    color: COLORES.textoSuave,
-    fontSize: LETRA.pequena,
-    textAlign: 'center',
-    marginTop: ESPACIO.s,
-  },
-  vacio: {
-    color: COLORES.texto,
-    fontSize: LETRA.normal,
-    textAlign: 'center',
-    lineHeight: 26,
-  },
-});
+// Los estilos dependen de la paleta activa: se crean con ella.
+function crearEstilos(c) {
+  return StyleSheet.create({
+    contenido: {
+      padding: ESPACIO.m,
+      paddingBottom: ESPACIO.xl,
+    },
+    cabecera: {
+      backgroundColor: c.primarioOscuro,
+      borderRadius: RADIO.tarjeta,
+      padding: ESPACIO.l,
+      marginBottom: ESPACIO.m,
+    },
+    saludo: {
+      color: c.blanco,
+      fontSize: LETRA.titulo,
+      fontWeight: '800',
+    },
+    taller: {
+      color: '#bfdbfe',
+      fontSize: LETRA.pequena,
+      marginTop: 2,
+    },
+    resumen: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: ESPACIO.s,
+      backgroundColor: 'rgba(255,255,255,0.14)',
+      borderRadius: RADIO.campo,
+      padding: ESPACIO.m,
+      marginTop: ESPACIO.m,
+    },
+    resumenTexto: {
+      color: c.blanco,
+      fontSize: LETRA.normal,
+      fontWeight: '600',
+      flex: 1,
+      lineHeight: 22,
+    },
+    filaSuperior: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    flecha: {
+      color: c.textoSuave,
+      fontSize: 34,
+      fontWeight: '300',
+    },
+    marca: {
+      color: c.textoSuave,
+      fontSize: LETRA.normal,
+      marginTop: ESPACIO.s,
+      marginBottom: ESPACIO.m,
+    },
+    pista: {
+      color: c.textoSuave,
+      fontSize: LETRA.pequena,
+      textAlign: 'center',
+      marginTop: ESPACIO.s,
+    },
+    vacio: {
+      color: c.texto,
+      fontSize: LETRA.normal,
+      textAlign: 'center',
+      lineHeight: 26,
+    },
+  });
+}

@@ -2,18 +2,22 @@
 //  PANTALLA: Entrar
 // ============================================================
 // Una sola tarea: identificarse. Dos campos, un botón, cero ruido.
-// Look v2: fondo claro, logo en círculo azul, formulario en tarjeta.
+// v3: los estilos se crean con la paleta activa (claro u oscuro).
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
+import { useTema } from '../apariencia';
 import { Boton, CajaError, Tarjeta } from '../componentes';
 import { useSesion } from '../sesion';
-import { COLORES, ESPACIO, LETRA, RADIO, SOMBRA } from '../tema';
+import { ESPACIO, LETRA, RADIO, SOMBRA } from '../tema';
 
 export default function Entrar() {
   const { entrar } = useSesion();
+  const { colores } = useTema();
+  const estilos = useMemo(() => crearEstilos(colores), [colores]);
+
   const [email, setEmail] = useState('');
   const [clave, setClave] = useState('');
   const [error, setError] = useState(null);
@@ -38,7 +42,7 @@ export default function Entrar() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: COLORES.fondo }}
+      style={{ flex: 1, backgroundColor: colores.fondo }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={estilos.contenido} keyboardShouldPersistTaps="handled">
@@ -58,7 +62,7 @@ export default function Entrar() {
             value={email}
             onChangeText={setEmail}
             placeholder="ejemplo@correo.com"
-            placeholderTextColor={COLORES.textoSuave}
+            placeholderTextColor={colores.textoSuave}
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
@@ -70,7 +74,7 @@ export default function Entrar() {
             value={clave}
             onChangeText={setClave}
             placeholder="••••••••"
-            placeholderTextColor={COLORES.textoSuave}
+            placeholderTextColor={colores.textoSuave}
             secureTextEntry
           />
 
@@ -93,58 +97,61 @@ export default function Entrar() {
   );
 }
 
-const estilos = StyleSheet.create({
-  contenido: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    padding: ESPACIO.l,
-  },
-  circuloLogo: {
-    width: 92,
-    height: 92,
-    borderRadius: 46,
-    backgroundColor: COLORES.primarioSuave,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-  },
-  titulo: {
-    color: COLORES.texto,
-    fontSize: LETRA.titulo,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginTop: ESPACIO.m,
-  },
-  subtitulo: {
-    color: COLORES.textoSuave,
-    fontSize: LETRA.normal,
-    textAlign: 'center',
-    marginTop: ESPACIO.s,
-    marginBottom: ESPACIO.xl,
-    lineHeight: 24,
-  },
-  etiqueta: {
-    color: COLORES.texto,
-    fontSize: LETRA.pequena,
-    fontWeight: '700',
-    marginBottom: ESPACIO.xs,
-  },
-  campo: {
-    backgroundColor: COLORES.fondo,
-    borderWidth: 1,
-    borderColor: COLORES.borde,
-    borderRadius: RADIO.campo,
-    color: COLORES.texto,
-    fontSize: LETRA.normal,
-    padding: ESPACIO.m,
-    marginBottom: ESPACIO.m,
-    minHeight: 52,
-  },
-  ayuda: {
-    color: COLORES.textoSuave,
-    fontSize: LETRA.pequena,
-    textAlign: 'center',
-    marginTop: ESPACIO.l,
-    lineHeight: 22,
-  },
-});
+// Los estilos dependen de la paleta activa: se crean con ella.
+function crearEstilos(c) {
+  return StyleSheet.create({
+    contenido: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      padding: ESPACIO.l,
+    },
+    circuloLogo: {
+      width: 92,
+      height: 92,
+      borderRadius: 46,
+      backgroundColor: c.primarioSuave,
+      alignItems: 'center',
+      justifyContent: 'center',
+      alignSelf: 'center',
+    },
+    titulo: {
+      color: c.texto,
+      fontSize: LETRA.titulo,
+      fontWeight: '800',
+      textAlign: 'center',
+      marginTop: ESPACIO.m,
+    },
+    subtitulo: {
+      color: c.textoSuave,
+      fontSize: LETRA.normal,
+      textAlign: 'center',
+      marginTop: ESPACIO.s,
+      marginBottom: ESPACIO.xl,
+      lineHeight: 24,
+    },
+    etiqueta: {
+      color: c.texto,
+      fontSize: LETRA.pequena,
+      fontWeight: '700',
+      marginBottom: ESPACIO.xs,
+    },
+    campo: {
+      backgroundColor: c.fondo,
+      borderWidth: 1,
+      borderColor: c.borde,
+      borderRadius: RADIO.campo,
+      color: c.texto,
+      fontSize: LETRA.normal,
+      padding: ESPACIO.m,
+      marginBottom: ESPACIO.m,
+      minHeight: 52,
+    },
+    ayuda: {
+      color: c.textoSuave,
+      fontSize: LETRA.pequena,
+      textAlign: 'center',
+      marginTop: ESPACIO.l,
+      lineHeight: 22,
+    },
+  });
+}

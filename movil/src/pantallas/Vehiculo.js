@@ -2,26 +2,29 @@
 //  PANTALLA: Detalle del vehículo
 // ============================================================
 // Aquí sí se ve TODO, pero ordenado por urgencia: lo rojo arriba.
-// Look v2: cada mantenimiento con su ícono (🛢️ 🛑 ⛽), su frase en
-// cristiano y una barrita que muestra qué tan cerca está de vencerse.
+// Cada mantenimiento con su ícono (🛢️ 🛑 ⛽), su frase en cristiano
+// y una barrita de progreso. v3: soporta claro/oscuro.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import * as api from '../api';
+import { useTema } from '../apariencia';
 import {
   BarraProgreso, Boton, CajaError, CirculoIcono, Placa, Tarjeta,
 } from '../componentes';
 import { useSesion } from '../sesion';
 import {
-  COLORES, ESPACIO, ESTADOS, LETRA, RADIO,
-  formatearKm, fraccionUso, fraseMantenimiento, iconoMantenimiento,
+  ESPACIO, ESTADOS, LETRA, RADIO,
+  formatearKm, fraccionUso, fraseMantenimiento, iconoMantenimiento, infoEstado,
 } from '../tema';
 
 export default function Vehiculo({ route }) {
   const { vehiculo } = route.params;
   const { token } = useSesion();
+  const { colores } = useTema();
+  const estilos = useMemo(() => crearEstilos(colores), [colores]);
 
   // La cita pendiente de ESTE vehículo (si ya pidió una).
   const [citaPendiente, setCitaPendiente] = useState(null);
@@ -71,7 +74,7 @@ export default function Vehiculo({ route }) {
 
   return (
     <ScrollView
-      style={{ flex: 1, backgroundColor: COLORES.fondo }}
+      style={{ flex: 1, backgroundColor: colores.fondo }}
       contentContainerStyle={estilos.contenido}
     >
       {/* Identidad del carro: placa grande, marca y km estimado. */}
@@ -96,7 +99,7 @@ export default function Vehiculo({ route }) {
           <Text style={estilos.fraseSuave}>El taller aún no configuró recordatorios.</Text>
         )}
         {mantenimientos.map((m, i) => {
-          const info = ESTADOS[m.estado] || ESTADOS.al_dia;
+          const info = infoEstado(m.estado, colores);
           return (
             <View key={m.tipo_id} style={[estilos.filaMant, i > 0 && estilos.filaBorde]}>
               <CirculoIcono icono={iconoMantenimiento(m.tipo)} fondo={info.fondo} />
@@ -115,14 +118,14 @@ export default function Vehiculo({ route }) {
       {/* La acción: pedir cita. Si ya hay una, lo decimos y no repetimos. */}
       <Text style={estilos.seccion}>Cita con el taller</Text>
       {mensaje && (
-        <Tarjeta style={{ backgroundColor: COLORES.alDiaFondo }}>
-          <Text style={[estilos.confirmacion, { color: COLORES.alDia }]}>✅ {mensaje}</Text>
+        <Tarjeta style={{ backgroundColor: colores.alDiaFondo }}>
+          <Text style={[estilos.confirmacion, { color: colores.alDia }]}>✅ {mensaje}</Text>
         </Tarjeta>
       )}
 
       {citaPendiente && !mensaje && (
-        <Tarjeta style={{ backgroundColor: COLORES.primarioSuave }}>
-          <Text style={[estilos.confirmacion, { color: COLORES.primarioOscuro }]}>
+        <Tarjeta style={{ backgroundColor: colores.primarioSuave }}>
+          <Text style={[estilos.confirmacion, { color: colores.texto }]}>
             📅 Ya tienes una cita{' '}
             {citaPendiente.estado === 'confirmada' ? 'confirmada' : 'solicitada'} para el{' '}
             {citaPendiente.fecha}.
@@ -163,7 +166,7 @@ export default function Vehiculo({ route }) {
             value={nota}
             onChangeText={setNota}
             placeholder="Ej.: suena raro al frenar"
-            placeholderTextColor={COLORES.textoSuave}
+            placeholderTextColor={colores.textoSuave}
             multiline
           />
 
@@ -209,147 +212,150 @@ function opcionesDeFecha() {
   return [en(1, 'Mañana'), en(3, 'En 3 días'), en(7, 'En una semana')];
 }
 
-const estilos = StyleSheet.create({
-  contenido: {
-    padding: ESPACIO.m,
-    paddingBottom: ESPACIO.xl,
-  },
-  cabecera: {
-    alignItems: 'center',
-    paddingVertical: ESPACIO.l,
-  },
-  marca: {
-    color: COLORES.texto,
-    fontSize: LETRA.subtitulo,
-    fontWeight: '700',
-    marginTop: ESPACIO.m,
-  },
-  cajitaKm: {
-    backgroundColor: COLORES.fondo,
-    borderRadius: 999,
-    paddingVertical: 6,
-    paddingHorizontal: ESPACIO.m,
-    marginTop: ESPACIO.s,
-  },
-  km: {
-    color: COLORES.textoSuave,
-    fontSize: LETRA.pequena,
-  },
-  kmNumero: {
-    color: COLORES.texto,
-    fontWeight: '800',
-  },
-  seccion: {
-    color: COLORES.textoSuave,
-    fontSize: LETRA.pequena,
-    fontWeight: '800',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: ESPACIO.l,
-    marginBottom: ESPACIO.s,
-    marginLeft: ESPACIO.xs,
-  },
-  filaMant: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: ESPACIO.m,
-  },
-  filaBorde: {
-    borderTopWidth: 1,
-    borderTopColor: COLORES.borde,
-  },
-  nombreMant: {
-    color: COLORES.texto,
-    fontSize: LETRA.normal,
-    fontWeight: '700',
-  },
-  fraseMant: {
-    fontSize: LETRA.pequena,
-    marginTop: 2,
-    fontWeight: '700',
-  },
-  fraseSuave: {
-    color: COLORES.textoSuave,
-    fontSize: LETRA.normal,
-  },
-  confirmacion: {
-    fontSize: LETRA.normal,
-    lineHeight: 24,
-    fontWeight: '600',
-  },
-  pregunta: {
-    color: COLORES.texto,
-    fontSize: LETRA.normal,
-    fontWeight: '700',
-    marginBottom: ESPACIO.s,
-  },
-  filaFechas: {
-    flexDirection: 'row',
-    gap: ESPACIO.s,
-    marginBottom: ESPACIO.m,
-  },
-  chipFecha: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: COLORES.borde,
-    borderRadius: RADIO.campo,
-    paddingVertical: ESPACIO.m,
-    alignItems: 'center',
-    minHeight: 54,
-    backgroundColor: COLORES.fondo,
-  },
-  chipElegido: {
-    borderColor: COLORES.primario,
-    backgroundColor: COLORES.primarioSuave,
-  },
-  chipTexto: {
-    color: COLORES.texto,
-    fontSize: LETRA.pequena,
-    fontWeight: '700',
-  },
-  chipTextoElegido: {
-    color: COLORES.primarioOscuro,
-  },
-  chipFechaChica: {
-    color: COLORES.textoSuave,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  campoNota: {
-    backgroundColor: COLORES.fondo,
-    borderWidth: 1,
-    borderColor: COLORES.borde,
-    borderRadius: RADIO.campo,
-    color: COLORES.texto,
-    fontSize: LETRA.normal,
-    padding: ESPACIO.m,
-    minHeight: 70,
-    marginBottom: ESPACIO.m,
-    textAlignVertical: 'top',
-  },
-  cancelar: {
-    color: COLORES.textoSuave,
-    fontSize: LETRA.pequena,
-    textAlign: 'center',
-  },
-  filaHist: {
-    flexDirection: 'row',
-    paddingVertical: ESPACIO.m,
-    gap: ESPACIO.m,
-  },
-  fechaHist: {
-    color: COLORES.textoSuave,
-    fontSize: LETRA.pequena,
-    width: 84,
-  },
-  descHist: {
-    color: COLORES.texto,
-    fontSize: LETRA.pequena,
-    lineHeight: 20,
-  },
-  kmHist: {
-    color: COLORES.textoSuave,
-    fontSize: 12,
-    marginTop: 2,
-  },
-});
+// Los estilos dependen de la paleta activa: se crean con ella.
+function crearEstilos(c) {
+  return StyleSheet.create({
+    contenido: {
+      padding: ESPACIO.m,
+      paddingBottom: ESPACIO.xl,
+    },
+    cabecera: {
+      alignItems: 'center',
+      paddingVertical: ESPACIO.l,
+    },
+    marca: {
+      color: c.texto,
+      fontSize: LETRA.subtitulo,
+      fontWeight: '700',
+      marginTop: ESPACIO.m,
+    },
+    cajitaKm: {
+      backgroundColor: c.fondo,
+      borderRadius: 999,
+      paddingVertical: 6,
+      paddingHorizontal: ESPACIO.m,
+      marginTop: ESPACIO.s,
+    },
+    km: {
+      color: c.textoSuave,
+      fontSize: LETRA.pequena,
+    },
+    kmNumero: {
+      color: c.texto,
+      fontWeight: '800',
+    },
+    seccion: {
+      color: c.textoSuave,
+      fontSize: LETRA.pequena,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginTop: ESPACIO.l,
+      marginBottom: ESPACIO.s,
+      marginLeft: ESPACIO.xs,
+    },
+    filaMant: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      paddingVertical: ESPACIO.m,
+    },
+    filaBorde: {
+      borderTopWidth: 1,
+      borderTopColor: c.borde,
+    },
+    nombreMant: {
+      color: c.texto,
+      fontSize: LETRA.normal,
+      fontWeight: '700',
+    },
+    fraseMant: {
+      fontSize: LETRA.pequena,
+      marginTop: 2,
+      fontWeight: '700',
+    },
+    fraseSuave: {
+      color: c.textoSuave,
+      fontSize: LETRA.normal,
+    },
+    confirmacion: {
+      fontSize: LETRA.normal,
+      lineHeight: 24,
+      fontWeight: '600',
+    },
+    pregunta: {
+      color: c.texto,
+      fontSize: LETRA.normal,
+      fontWeight: '700',
+      marginBottom: ESPACIO.s,
+    },
+    filaFechas: {
+      flexDirection: 'row',
+      gap: ESPACIO.s,
+      marginBottom: ESPACIO.m,
+    },
+    chipFecha: {
+      flex: 1,
+      borderWidth: 1.5,
+      borderColor: c.borde,
+      borderRadius: RADIO.campo,
+      paddingVertical: ESPACIO.m,
+      alignItems: 'center',
+      minHeight: 54,
+      backgroundColor: c.fondo,
+    },
+    chipElegido: {
+      borderColor: c.primario,
+      backgroundColor: c.primarioSuave,
+    },
+    chipTexto: {
+      color: c.texto,
+      fontSize: LETRA.pequena,
+      fontWeight: '700',
+    },
+    chipTextoElegido: {
+      color: c.texto,
+    },
+    chipFechaChica: {
+      color: c.textoSuave,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    campoNota: {
+      backgroundColor: c.fondo,
+      borderWidth: 1,
+      borderColor: c.borde,
+      borderRadius: RADIO.campo,
+      color: c.texto,
+      fontSize: LETRA.normal,
+      padding: ESPACIO.m,
+      minHeight: 70,
+      marginBottom: ESPACIO.m,
+      textAlignVertical: 'top',
+    },
+    cancelar: {
+      color: c.textoSuave,
+      fontSize: LETRA.pequena,
+      textAlign: 'center',
+    },
+    filaHist: {
+      flexDirection: 'row',
+      paddingVertical: ESPACIO.m,
+      gap: ESPACIO.m,
+    },
+    fechaHist: {
+      color: c.textoSuave,
+      fontSize: LETRA.pequena,
+      width: 84,
+    },
+    descHist: {
+      color: c.texto,
+      fontSize: LETRA.pequena,
+      lineHeight: 20,
+    },
+    kmHist: {
+      color: c.textoSuave,
+      fontSize: 12,
+      marginTop: 2,
+    },
+  });
+}

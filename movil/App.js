@@ -1,43 +1,48 @@
 // ============================================================
 //  App.js — el punto de entrada de la app
 // ============================================================
-// Decide UNA cosa: si no hay sesión, muestra "Entrar"; si la hay,
-// muestra el navegador con las pantallas del cliente.
+// Envuelve todo en dos proveedores: apariencia (claro/oscuro) y
+// sesión. Luego decide: sin sesión -> "Entrar"; con sesión -> el
+// navegador con las pantallas del cliente.
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import { ProveedorApariencia, useTema } from './src/apariencia';
 import { Cargando } from './src/componentes';
 import Ajustes from './src/pantallas/Ajustes';
 import Entrar from './src/pantallas/Entrar';
 import MisVehiculos from './src/pantallas/MisVehiculos';
 import Vehiculo from './src/pantallas/Vehiculo';
 import { ProveedorSesion, useSesion } from './src/sesion';
-import { COLORES } from './src/tema';
 
 const Pila = createNativeStackNavigator();
 
-// Tema del navegador: que las barras y fondos usen NUESTROS colores.
-const temaNavegacion = {
-  dark: false,
-  colors: {
-    primary: COLORES.primario,
-    background: COLORES.fondo,
-    card: COLORES.tarjeta,
-    text: COLORES.texto,
-    border: COLORES.borde,
-    notification: COLORES.vencido,
-  },
-  fonts: {
-    regular: { fontFamily: 'System', fontWeight: '400' },
-    medium: { fontFamily: 'System', fontWeight: '500' },
-    bold: { fontFamily: 'System', fontWeight: '700' },
-    heavy: { fontFamily: 'System', fontWeight: '800' },
-  },
-};
-
 function Pantallas() {
   const { token, listo } = useSesion();
+  const { esquema, colores } = useTema();
+
+  // La barra de estado (hora, batería) se invierte según el modo.
+  const estiloBarra = esquema === 'oscuro' ? 'light' : 'dark';
+
+  // Tema del navegador: que las barras y fondos usen NUESTROS colores.
+  const temaNavegacion = {
+    dark: esquema === 'oscuro',
+    colors: {
+      primary: colores.primario,
+      background: colores.fondo,
+      card: colores.tarjeta,
+      text: colores.texto,
+      border: colores.borde,
+      notification: colores.vencido,
+    },
+    fonts: {
+      regular: { fontFamily: 'System', fontWeight: '400' },
+      medium: { fontFamily: 'System', fontWeight: '500' },
+      bold: { fontFamily: 'System', fontWeight: '700' },
+      heavy: { fontFamily: 'System', fontWeight: '800' },
+    },
+  };
 
   // Todavía estamos mirando si había sesión guardada en el celular.
   if (!listo) return <Cargando mensaje="Abriendo la app…" />;
@@ -47,7 +52,7 @@ function Pantallas() {
     return (
       <>
         <Entrar />
-        <StatusBar style="dark" />
+        <StatusBar style={estiloBarra} />
       </>
     );
   }
@@ -57,8 +62,8 @@ function Pantallas() {
     <NavigationContainer theme={temaNavegacion}>
       <Pila.Navigator
         screenOptions={{
-          headerStyle: { backgroundColor: COLORES.fondo },
-          headerTintColor: COLORES.texto,
+          headerStyle: { backgroundColor: colores.fondo },
+          headerTintColor: colores.texto,
           headerTitleStyle: { fontWeight: '800' },
           headerShadowVisible: false,
         }}
@@ -78,15 +83,17 @@ function Pantallas() {
         />
         <Pila.Screen name="Ajustes" component={Ajustes} options={{ title: 'Ajustes' }} />
       </Pila.Navigator>
-      <StatusBar style="dark" />
+      <StatusBar style={estiloBarra} />
     </NavigationContainer>
   );
 }
 
 export default function App() {
   return (
-    <ProveedorSesion>
-      <Pantallas />
-    </ProveedorSesion>
+    <ProveedorApariencia>
+      <ProveedorSesion>
+        <Pantallas />
+      </ProveedorSesion>
+    </ProveedorApariencia>
   );
 }
