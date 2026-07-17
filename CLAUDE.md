@@ -147,9 +147,20 @@ es la fuente confiable del km (lo registra en cada ingreso).
   `/portal/{token}/push-movil` (tabla `suscripciones_push` con
   `tipo="expo"`); `enviar_push_expo()` en `notificaciones.py` manda vía el
   servicio gratis de Expo y el envío diario elige canal según `tipo`;
-  prueba rápida con `probar_push_movil.py`. OJO: en Expo Go Android las
-  push remotas no funcionan (limitación de Expo Go); en iPhone sí. Para
-  ambos: development build con EAS (pendiente). Diseño: UI MUY simple
+  prueba rápida con `probar_push_movil.py`. **Push en Android FUNCIONANDO
+  (2026-07-17)** con development build de EAS: proyecto EAS
+  `taller-diesel-movil` (cuenta esqueletico5675), paquete
+  `com.tallerdiesel.movil`, keystore generada por EAS, Firebase del
+  usuario con FCM V1 (llave de cuenta de servicio ASIGNADA en el slot
+  "FCM V1 service account key" de expo.dev — si push da
+  InvalidCredentials, revisar esa asignación). `google-services.json` y
+  `llave-fcm-taller.json` viven en `movil/` IGNORADOS por git; el
+  primero viaja al build como variable de archivo secreta
+  `GOOGLE_SERVICES_JSON` (resuelta en `app.config.js`). Compilar:
+  `eas build -p android --profile development`. El development build
+  necesita Metro (`npx expo start`) en el PC; para el piloto autónomo
+  usar el perfil `preview`. En Expo Go Android las push siguen sin
+  funcionar (probar solo con el build). iPhone: Expo Go sí recibe push. Diseño: UI MUY simple
   para clientes no técnicos (la v1 fue rechazada por confusa) — lenguaje
   cotidiano, estados con color+ícono+palabra+acción, letra grande.
   **Modo TALLER completo (paridad con el panel web):** login del personal
