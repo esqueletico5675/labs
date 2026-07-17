@@ -2,8 +2,8 @@
 //  PANTALLA: Mis vehículos (la pantalla principal)
 // ============================================================
 // Responde UNA pregunta en 3 segundos: "¿mi carro está bien o no?"
-// Por eso cada vehículo muestra un solo resumen (su peor estado),
-// no una lista de veinte datos. El detalle vive en la otra pantalla.
+// Look v2: cabecera azul con el resumen en una frase, y una tarjeta
+// blanca por carro con su placa, su estado y qué hacer.
 
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -13,7 +13,7 @@ import {
 import * as api from '../api';
 import { BandaEstado, CajaError, Cargando, Placa, Tarjeta } from '../componentes';
 import { useSesion } from '../sesion';
-import { COLORES, ESPACIO, LETRA, peorEstado } from '../tema';
+import { COLORES, ESPACIO, LETRA, RADIO, peorEstado } from '../tema';
 
 export default function MisVehiculos({ navigation }) {
   const { token, salir } = useSesion();
@@ -28,7 +28,7 @@ export default function MisVehiculos({ navigation }) {
       setDatos(respuesta);
     } catch (e) {
       setError(e.message);
-      // Si el enlace fue anulado por el taller (410/404), cerramos sesión.
+      // Si el enlace fue anulado por el taller, cerramos sesión.
       if (String(e.message).includes('Enlace inválido')) salir();
     }
   }
@@ -68,59 +68,102 @@ export default function MisVehiculos({ navigation }) {
 
   if (!datos && !error) return <Cargando mensaje="Buscando tus vehículos…" />;
 
+  const vehiculos = datos ? datos.vehiculos : [];
+  const resumen = resumenGeneral(vehiculos);
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: COLORES.fondo }}
       contentContainerStyle={estilos.contenido}
       refreshControl={
-        <RefreshControl refreshing={refrescando} onRefresh={alRefrescar} tintColor={COLORES.texto} />
+        <RefreshControl
+          refreshing={refrescando}
+          onRefresh={alRefrescar}
+          tintColor={COLORES.primario}
+        />
       }
     >
       {datos && (
-        <>
-          {/* Saludo con nombre: la app le habla a UNA persona. */}
+        /* Cabecera azul: saludo + el estado de TODO en una sola frase. */
+        <View style={estilos.cabecera}>
           <Text style={estilos.saludo}>Hola, {primerNombre(datos.cliente)} 👋</Text>
           <Text style={estilos.taller}>Cliente de {datos.taller}</Text>
-        </>
+          <View style={estilos.resumen}>
+            <Text style={{ fontSize: 22 }}>{resumen.icono}</Text>
+            <Text style={estilos.resumenTexto}>{resumen.frase}</Text>
+          </View>
+        </View>
       )}
 
       <CajaError mensaje={error} />
 
-      {datos && datos.vehiculos.length === 0 && (
+      {datos && vehiculos.length === 0 && (
         <Tarjeta>
           <Text style={estilos.vacio}>
-            Aún no tienes vehículos registrados.{'\n'}
+            🚗{'\n\n'}Aún no tienes vehículos registrados.{'\n'}
             Pídele a tu taller que registre tu carro.
           </Text>
         </Tarjeta>
       )}
 
-      {datos &&
-        datos.vehiculos.map((v) => {
-          const resumen = peorEstado(v.mantenimientos);
-          return (
-            <Pressable
-              key={v.vehiculo_id}
-              onPress={() => navigation.navigate('Vehiculo', { vehiculo: v })}
-            >
-              {({ pressed }) => (
-                <Tarjeta style={{ opacity: pressed ? 0.8 : 1 }}>
-                  <View style={estilos.filaSuperior}>
-                    <Placa texto={v.placa} />
-                    <Text style={estilos.flecha}>›</Text>
-                  </View>
-                  <Text style={estilos.marca}>
-                    {v.marca} {v.modelo}
-                  </Text>
-                  <BandaEstado estado={resumen} grande />
-                  <Text style={estilos.verMas}>Toca para ver el detalle</Text>
-                </Tarjeta>
-              )}
-            </Pressable>
-          );
-        })}
+      {vehiculos.map((v) => {
+        const estado = peorEstado(v.mantenimientos);
+        return (
+          <Pressable
+            key={v.vehiculo_id}
+            onPress={() => navigation.navigate('Vehiculo', { vehiculo: v })}
+          >
+            {({ pressed }) => (
+              <Tarjeta style={{ opacity: pressed ? 0.85 : 1 }}>
+                <View style={estilos.filaSuperior}>
+                  <Placa texto={v.placa} />
+                  <Text style={estilos.flecha}>›</Text>
+                </View>
+                <Text style={estilos.marca}>
+                  🚛 {v.marca} {v.modelo}
+                </Text>
+                <BandaEstado estado={estado} />
+              </Tarjeta>
+            )}
+          </Pressable>
+        );
+      })}
+
+      {vehiculos.length > 0 && (
+        <Text style={estilos.pista}>Toca un vehículo para ver su detalle</Text>
+      )}
     </ScrollView>
   );
+}
+
+// La frase de la cabecera: el resumen de TODOS los carros en cristiano.
+function resumenGeneral(vehiculos) {
+  if (!vehiculos || vehiculos.length === 0) {
+    return { icono: '🚗', frase: 'Sin vehículos por ahora' };
+  }
+  const conProblema = vehiculos.filter((v) => peorEstado(v.mantenimientos) === 'vencido');
+  const porRevisar = vehiculos.filter((v) => peorEstado(v.mantenimientos) === 'proximo');
+
+  if (conProblema.length > 0) {
+    const placas = conProblema.map((v) => v.placa).join(', ');
+    return {
+      icono: '🔴',
+      frase:
+        conProblema.length === 1
+          ? `Tu carro ${placas} necesita taller`
+          : `${conProblema.length} carros necesitan taller: ${placas}`,
+    };
+  }
+  if (porRevisar.length > 0) {
+    return {
+      icono: '🟠',
+      frase:
+        porRevisar.length === 1
+          ? `A ${porRevisar[0].placa} le toca revisión pronto`
+          : `${porRevisar.length} carros necesitan revisión pronto`,
+    };
+  }
+  return { icono: '🎉', frase: 'Todos tus carros están al día' };
 }
 
 // "María Fernanda Gómez" -> "María" (más cercano, menos formal).
@@ -133,15 +176,37 @@ const estilos = StyleSheet.create({
     padding: ESPACIO.m,
     paddingBottom: ESPACIO.xl,
   },
+  cabecera: {
+    backgroundColor: COLORES.primarioOscuro,
+    borderRadius: RADIO.tarjeta,
+    padding: ESPACIO.l,
+    marginBottom: ESPACIO.m,
+  },
   saludo: {
-    color: COLORES.texto,
+    color: COLORES.blanco,
     fontSize: LETRA.titulo,
     fontWeight: '800',
   },
   taller: {
-    color: COLORES.textoSuave,
+    color: '#bfdbfe',
     fontSize: LETRA.pequena,
-    marginBottom: ESPACIO.l,
+    marginTop: 2,
+  },
+  resumen: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ESPACIO.s,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: RADIO.campo,
+    padding: ESPACIO.m,
+    marginTop: ESPACIO.m,
+  },
+  resumenTexto: {
+    color: COLORES.blanco,
+    fontSize: LETRA.normal,
+    fontWeight: '600',
+    flex: 1,
+    lineHeight: 22,
   },
   filaSuperior: {
     flexDirection: 'row',
@@ -159,11 +224,11 @@ const estilos = StyleSheet.create({
     marginTop: ESPACIO.s,
     marginBottom: ESPACIO.m,
   },
-  verMas: {
+  pista: {
     color: COLORES.textoSuave,
     fontSize: LETRA.pequena,
     textAlign: 'center',
-    marginTop: ESPACIO.m,
+    marginTop: ESPACIO.s,
   },
   vacio: {
     color: COLORES.texto,

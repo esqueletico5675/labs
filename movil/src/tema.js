@@ -2,29 +2,48 @@
 //  TEMA — el sistema de diseño de la app (una sola fuente de verdad)
 // ============================================================
 // Regla de oro: NINGUNA pantalla inventa colores ni tamaños.
-// Todo sale de aquí. Así la app entera se ve y se siente igual.
+// Rediseño v2: tema CLARO y amigable. Fondo suave, tarjetas blancas
+// con sombra, colores de estado con su versión "pastel" de fondo.
+// Se lee mejor a pleno sol (¡en un taller!) y se siente cercano.
 
-// Paleta compartida con el portal web. Los 3 colores de estado están
-// validados para daltonismo, y NUNCA van solos: siempre con palabra e ícono.
 export const COLORES = {
-  fondo: '#10161f',       // fondo general (azul muy oscuro)
-  tarjeta: '#1a2230',     // tarjetas y cajas
-  borde: '#2a3648',       // bordes sutiles
-  texto: '#f1f5f9',       // texto principal (casi blanco)
-  textoSuave: '#94a3b8',  // texto secundario (gris azulado)
-  primario: '#3b82f6',    // botones de acción (azul)
-  alDia: '#059669',       // verde  — todo bien
-  proximo: '#d97706',     // ámbar  — atención pronto
-  vencido: '#ef4444',     // rojo   — acción ya
-  placaFondo: '#fbbf24',  // amarillo placa colombiana
-  placaTexto: '#111827',  // texto negro de la placa
+  fondo: '#eef2f7',        // gris azulado muy suave (no blanco puro: cansa menos)
+  tarjeta: '#ffffff',      // tarjetas blancas
+  borde: '#e2e8f0',        // bordes casi invisibles
+  texto: '#0f172a',        // texto principal (azul casi negro)
+  textoSuave: '#64748b',   // texto secundario
+  primario: '#2563eb',     // azul de acción (botones, enlaces)
+  primarioOscuro: '#1e40af', // azul de la cabecera
+  primarioSuave: '#dbeafe',  // fondo azul pastel
+
+  // Estados: color fuerte (texto/íconos) + fondo pastel (superficies).
+  // Elegidos con contraste AA sobre blanco y distinguibles con daltonismo.
+  alDia: '#047857',    alDiaFondo: '#d1fae5',
+  proximo: '#b45309',  proximoFondo: '#fef3c7',
+  vencido: '#dc2626',  vencidoFondo: '#fee2e2',
+
+  placaFondo: '#fbbf24',   // amarillo placa colombiana
+  placaTexto: '#111827',
+  blanco: '#ffffff',
+};
+
+// Sombra suave estándar de todas las tarjetas (elevation es la de Android).
+export const SOMBRA = {
+  shadowColor: '#0f172a',
+  shadowOpacity: 0.08,
+  shadowRadius: 12,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 3,
 };
 
 // Espaciados consistentes (múltiplos de 4, estándar en diseño móvil).
 export const ESPACIO = { xs: 4, s: 8, m: 16, l: 24, xl: 32 };
 
-// Tamaños de letra: grandes a propósito. Nuestros usuarios no son
-// técnicos y muchos leerán sin gafas en el taller.
+// Radio de las esquinas: bien redondeadas = sensación amigable.
+export const RADIO = { tarjeta: 20, boton: 16, campo: 14 };
+
+// Tamaños de letra: grandes a propósito (usuarios no técnicos,
+// muchos leerán sin gafas en el taller).
 export const LETRA = {
   titulo: 28,
   subtitulo: 20,
@@ -34,17 +53,17 @@ export const LETRA = {
 };
 
 // Alto mínimo de todo lo tocable (dedos grandes, guantes de mecánico).
-export const ALTO_TOQUE = 52;
+export const ALTO_TOQUE = 54;
 
 // ============================================================
-//  Los 3 estados, traducidos a LENGUAJE COTIDIANO.
+//  Los 3 estados, en LENGUAJE COTIDIANO.
 // ============================================================
-// El backend dice "vencido / proximo / al_dia". El cliente no tiene por
-// qué entender jerga: cada estado tiene su color, su ícono, su nombre
-// y LA ACCIÓN que debe tomar. Eso responde siempre "¿y yo qué hago?".
+// El backend dice "vencido / proximo / al_dia". El cliente ve color +
+// ícono + nombre + LA ACCIÓN a tomar. Nunca un color solo.
 export const ESTADOS = {
   vencido: {
     color: COLORES.vencido,
+    fondo: COLORES.vencidoFondo,
     icono: '🔴',
     nombre: 'Necesita taller',
     accion: 'Pide tu cita ya',
@@ -52,6 +71,7 @@ export const ESTADOS = {
   },
   proximo: {
     color: COLORES.proximo,
+    fondo: COLORES.proximoFondo,
     icono: '🟠',
     nombre: 'Revisar pronto',
     accion: 'Agenda con calma esta semana',
@@ -59,6 +79,7 @@ export const ESTADOS = {
   },
   al_dia: {
     color: COLORES.alDia,
+    fondo: COLORES.alDiaFondo,
     icono: '🟢',
     nombre: 'Todo al día',
     accion: 'No tienes que hacer nada',
@@ -66,9 +87,21 @@ export const ESTADOS = {
   },
 };
 
-// Dado un vehículo con su lista de mantenimientos, devuelve el PEOR
-// estado (el más urgente). Es lo único que mostramos en la lista de
-// vehículos: un resumen, no veinte detalles.
+// Ícono según el nombre del mantenimiento: se reconoce sin leer.
+export function iconoMantenimiento(nombre) {
+  const n = (nombre || '').toLowerCase();
+  if (n.includes('aceite')) return '🛢️';
+  if (n.includes('freno')) return '🛑';
+  if (n.includes('combustible')) return '⛽';
+  if (n.includes('aire') || n.includes('habitáculo') || n.includes('polen')) return '💨';
+  if (n.includes('refrigerante')) return '❄️';
+  if (n.includes('llanta') || n.includes('rotación')) return '🛞';
+  if (n.includes('batería')) return '🔋';
+  if (n.includes('correa')) return '⚙️';
+  return '🔧';
+}
+
+// Peor estado de un vehículo (lo único que mostramos en la lista).
 export function peorEstado(mantenimientos) {
   let peor = 'al_dia';
   for (const m of mantenimientos || []) {
@@ -79,8 +112,24 @@ export function peorEstado(mantenimientos) {
   return peor;
 }
 
-// Frase corta y humana para UN mantenimiento. Ejemplos:
-//  "Vencido hace 500 km" · "Te toca en unos 2.000 km" · "Al día"
+// Qué tan "gastado" va un mantenimiento, de 0 (recién hecho) a 1 (vencido).
+// Sirve para la barrita de progreso. Usa km o meses, lo que haya.
+export function fraccionUso(m) {
+  const porKm =
+    m.intervalo_km && m.km_faltantes !== null && m.km_faltantes !== undefined
+      ? 1 - m.km_faltantes / m.intervalo_km
+      : null;
+  const porMeses =
+    m.intervalo_meses && m.meses_faltantes !== null && m.meses_faltantes !== undefined
+      ? 1 - m.meses_faltantes / m.intervalo_meses
+      : null;
+  const valores = [porKm, porMeses].filter((v) => v !== null && !Number.isNaN(v));
+  if (valores.length === 0) return m.estado === 'vencido' ? 1 : null;
+  // El más avanzado de los dos, acotado entre 0 y 1.
+  return Math.max(0, Math.min(1, Math.max(...valores)));
+}
+
+// Frase corta y humana para UN mantenimiento.
 export function fraseMantenimiento(m) {
   const km = m.km_faltantes;
   const meses = m.meses_faltantes;

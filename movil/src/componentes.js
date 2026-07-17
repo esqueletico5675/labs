@@ -1,13 +1,16 @@
 // ============================================================
 //  COMPONENTES — las piezas de LEGO que comparten las pantallas
 // ============================================================
-// Si un botón se ve de una forma en una pantalla, se ve IGUAL en todas.
-// Eso es lo que hace que una app se sienta "bien hecha".
+// Rediseño v2 (tema claro): tarjetas blancas con sombra suave,
+// insignias de estado tipo "píldora" y barra de progreso por
+// mantenimiento. Si una pieza cambia aquí, cambia en toda la app.
 
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { ALTO_TOQUE, COLORES, ESPACIO, ESTADOS, LETRA } from './tema';
+import {
+  ALTO_TOQUE, COLORES, ESPACIO, ESTADOS, LETRA, RADIO, SOMBRA,
+} from './tema';
 
-// --- Botón principal: grande, texto claro, imposible de no ver ---
+// --- Botón principal: grande, redondeado, imposible de no ver ---
 export function Boton({ titulo, onPress, deshabilitado, tono = 'primario' }) {
   const fondo = tono === 'peligro' ? COLORES.vencido : COLORES.primario;
   return (
@@ -16,7 +19,8 @@ export function Boton({ titulo, onPress, deshabilitado, tono = 'primario' }) {
       disabled={deshabilitado}
       style={({ pressed }) => [
         estilos.boton,
-        { backgroundColor: fondo, opacity: deshabilitado ? 0.5 : pressed ? 0.8 : 1 },
+        SOMBRA,
+        { backgroundColor: fondo, opacity: deshabilitado ? 0.5 : pressed ? 0.85 : 1 },
       ]}
     >
       <Text style={estilos.botonTexto}>{titulo}</Text>
@@ -24,13 +28,12 @@ export function Boton({ titulo, onPress, deshabilitado, tono = 'primario' }) {
   );
 }
 
-// --- Tarjeta: la caja donde vive cada bloque de información ---
+// --- Tarjeta: caja blanca con sombra suave, esquinas bien redondas ---
 export function Tarjeta({ children, style }) {
-  return <View style={[estilos.tarjeta, style]}>{children}</View>;
+  return <View style={[estilos.tarjeta, SOMBRA, style]}>{children}</View>;
 }
 
-// --- Placa del vehículo: amarilla, como la placa real colombiana.
-//     El cliente reconoce SU carro por la placa, no por "vehículo #3". ---
+// --- Placa del vehículo: amarilla, como la placa real colombiana ---
 export function Placa({ texto }) {
   return (
     <View style={estilos.placa}>
@@ -39,27 +42,57 @@ export function Placa({ texto }) {
   );
 }
 
-// --- Banda de estado: color + ícono + nombre + qué hacer.
-//     Es EL mensaje central de la app; nunca un color solo. ---
-export function BandaEstado({ estado, grande }) {
+// --- Insignia de estado: píldora de color con ícono + palabra.
+//     Compacta, para las tarjetas de la lista. ---
+export function Insignia({ estado }) {
   const info = ESTADOS[estado] || ESTADOS.al_dia;
   return (
-    <View style={[estilos.banda, { borderColor: info.color, backgroundColor: info.color + '22' }]}>
-      <Text style={{ fontSize: grande ? 28 : 20 }}>{info.icono}</Text>
+    <View style={[estilos.insignia, { backgroundColor: info.fondo }]}>
+      <Text style={{ fontSize: 14 }}>{info.icono}</Text>
+      <Text style={[estilos.insigniaTexto, { color: info.color }]}>{info.nombre}</Text>
+    </View>
+  );
+}
+
+// --- Banda de estado: la versión grande, con la acción a tomar.
+//     Es EL mensaje central de la app; nunca un color solo. ---
+export function BandaEstado({ estado }) {
+  const info = ESTADOS[estado] || ESTADOS.al_dia;
+  return (
+    <View style={[estilos.banda, { backgroundColor: info.fondo }]}>
+      <Text style={{ fontSize: 26 }}>{info.icono}</Text>
       <View style={{ flex: 1, marginLeft: ESPACIO.m }}>
-        <Text style={[estilos.bandaNombre, { color: info.color, fontSize: grande ? LETRA.subtitulo : LETRA.normal }]}>
-          {info.nombre}
-        </Text>
-        <Text style={estilos.bandaAccion}>{info.accion}</Text>
+        <Text style={[estilos.bandaNombre, { color: info.color }]}>{info.nombre}</Text>
+        <Text style={[estilos.bandaAccion, { color: info.color }]}>{info.accion}</Text>
       </View>
     </View>
   );
 }
 
-// --- Punto de color con texto: para cada mantenimiento en el detalle ---
-export function PuntoEstado({ estado }) {
+// --- Barra de progreso: qué tan cerca está de vencerse (0 a 1).
+//     Verde al principio, del color del estado al final. ---
+export function BarraProgreso({ fraccion, estado }) {
+  if (fraccion === null || fraccion === undefined) return null;
   const info = ESTADOS[estado] || ESTADOS.al_dia;
-  return <View style={[estilos.punto, { backgroundColor: info.color }]} />;
+  return (
+    <View style={estilos.barraFondo}>
+      <View
+        style={[
+          estilos.barraRelleno,
+          { width: `${Math.round(fraccion * 100)}%`, backgroundColor: info.color },
+        ]}
+      />
+    </View>
+  );
+}
+
+// --- Círculo con el ícono del mantenimiento (🛢️ 🛑 ⛽ …) ---
+export function CirculoIcono({ icono, fondo = COLORES.primarioSuave }) {
+  return (
+    <View style={[estilos.circuloIcono, { backgroundColor: fondo }]}>
+      <Text style={{ fontSize: 20 }}>{icono}</Text>
+    </View>
+  );
 }
 
 // --- Pantalla de "cargando", con mensaje amable ---
@@ -77,7 +110,7 @@ export function CajaError({ mensaje }) {
   if (!mensaje) return null;
   return (
     <View style={estilos.cajaError}>
-      <Text style={estilos.cajaErrorTexto}>{mensaje}</Text>
+      <Text style={estilos.cajaErrorTexto}>⚠️ {mensaje}</Text>
     </View>
   );
 }
@@ -85,21 +118,19 @@ export function CajaError({ mensaje }) {
 const estilos = StyleSheet.create({
   boton: {
     minHeight: ALTO_TOQUE,
-    borderRadius: 14,
+    borderRadius: RADIO.boton,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: ESPACIO.l,
   },
   botonTexto: {
-    color: '#ffffff',
+    color: COLORES.blanco,
     fontSize: LETRA.normal,
     fontWeight: '700',
   },
   tarjeta: {
     backgroundColor: COLORES.tarjeta,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORES.borde,
+    borderRadius: RADIO.tarjeta,
     padding: ESPACIO.m,
     marginBottom: ESPACIO.m,
   },
@@ -118,25 +149,51 @@ const estilos = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 2,
   },
+  insignia: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: ESPACIO.m,
+    alignSelf: 'flex-start',
+  },
+  insigniaTexto: {
+    fontSize: LETRA.pequena,
+    fontWeight: '800',
+  },
   banda: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1.5,
+    borderRadius: RADIO.campo,
     padding: ESPACIO.m,
   },
   bandaNombre: {
+    fontSize: LETRA.subtitulo,
     fontWeight: '800',
   },
   bandaAccion: {
-    color: COLORES.textoSuave,
     fontSize: LETRA.pequena,
     marginTop: 2,
+    opacity: 0.85,
   },
-  punto: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+  barraFondo: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORES.borde,
+    overflow: 'hidden',
+    marginTop: ESPACIO.s,
+  },
+  barraRelleno: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  circuloIcono: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: ESPACIO.m,
   },
   centrado: {
@@ -152,16 +209,15 @@ const estilos = StyleSheet.create({
     marginTop: ESPACIO.m,
   },
   cajaError: {
-    backgroundColor: COLORES.vencido + '22',
-    borderColor: COLORES.vencido,
-    borderWidth: 1,
-    borderRadius: 12,
+    backgroundColor: COLORES.vencidoFondo,
+    borderRadius: RADIO.campo,
     padding: ESPACIO.m,
     marginBottom: ESPACIO.m,
   },
   cajaErrorTexto: {
-    color: '#fca5a5',
+    color: COLORES.vencido,
     fontSize: LETRA.pequena,
     lineHeight: 20,
+    fontWeight: '600',
   },
 });

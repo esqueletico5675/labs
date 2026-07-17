@@ -2,18 +2,21 @@
 //  PANTALLA: Detalle del vehículo
 // ============================================================
 // Aquí sí se ve TODO, pero ordenado por urgencia: lo rojo arriba.
-// Y la acción está a un toque: "Pedir cita" con fechas rápidas
-// (nada de calendarios enredados).
+// Look v2: cada mantenimiento con su ícono (🛢️ 🛑 ⛽), su frase en
+// cristiano y una barrita que muestra qué tan cerca está de vencerse.
 
 import { useEffect, useState } from 'react';
 import {
   Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import * as api from '../api';
-import { Boton, CajaError, Placa, PuntoEstado, Tarjeta } from '../componentes';
+import {
+  BarraProgreso, Boton, CajaError, CirculoIcono, Placa, Tarjeta,
+} from '../componentes';
 import { useSesion } from '../sesion';
 import {
-  COLORES, ESPACIO, ESTADOS, LETRA, formatearKm, fraseMantenimiento,
+  COLORES, ESPACIO, ESTADOS, LETRA, RADIO,
+  formatearKm, fraccionUso, fraseMantenimiento, iconoMantenimiento,
 } from '../tema';
 
 export default function Vehiculo({ route }) {
@@ -71,66 +74,65 @@ export default function Vehiculo({ route }) {
       style={{ flex: 1, backgroundColor: COLORES.fondo }}
       contentContainerStyle={estilos.contenido}
     >
-      {/* Identidad del carro: placa grande, marca debajo. */}
-      <View style={estilos.cabecera}>
+      {/* Identidad del carro: placa grande, marca y km estimado. */}
+      <Tarjeta style={estilos.cabecera}>
         <Placa texto={vehiculo.placa} />
         <Text style={estilos.marca}>
-          {vehiculo.marca} {vehiculo.modelo}
+          🚛 {vehiculo.marca} {vehiculo.modelo}
         </Text>
         {kmEstimado != null && (
-          <Text style={estilos.km}>
-            Va por unos {formatearKm(kmEstimado)} km (estimado)
-          </Text>
+          <View style={estilos.cajitaKm}>
+            <Text style={estilos.km}>
+              Va por unos <Text style={estilos.kmNumero}>{formatearKm(kmEstimado)} km</Text> (estimado)
+            </Text>
+          </View>
         )}
-      </View>
+      </Tarjeta>
 
-      {/* La lista de mantenimientos: punto de color + nombre + frase humana. */}
+      {/* La lista de mantenimientos: ícono + nombre + frase + barrita. */}
       <Text style={estilos.seccion}>Mantenimientos</Text>
       <Tarjeta>
         {mantenimientos.length === 0 && (
           <Text style={estilos.fraseSuave}>El taller aún no configuró recordatorios.</Text>
         )}
-        {mantenimientos.map((m, i) => (
-          <View
-            key={m.tipo_id}
-            style={[estilos.filaMant, i > 0 && estilos.filaMantBorde]}
-          >
-            <PuntoEstado estado={m.estado} />
-            <View style={{ flex: 1 }}>
-              <Text style={estilos.nombreMant}>{m.tipo}</Text>
-              <Text
-                style={[
-                  estilos.fraseMant,
-                  { color: ESTADOS[m.estado]?.color || COLORES.textoSuave },
-                ]}
-              >
-                {fraseMantenimiento(m)}
-              </Text>
+        {mantenimientos.map((m, i) => {
+          const info = ESTADOS[m.estado] || ESTADOS.al_dia;
+          return (
+            <View key={m.tipo_id} style={[estilos.filaMant, i > 0 && estilos.filaBorde]}>
+              <CirculoIcono icono={iconoMantenimiento(m.tipo)} fondo={info.fondo} />
+              <View style={{ flex: 1 }}>
+                <Text style={estilos.nombreMant}>{m.tipo}</Text>
+                <Text style={[estilos.fraseMant, { color: info.color }]}>
+                  {info.icono} {fraseMantenimiento(m)}
+                </Text>
+                <BarraProgreso fraccion={fraccionUso(m)} estado={m.estado} />
+              </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </Tarjeta>
 
       {/* La acción: pedir cita. Si ya hay una, lo decimos y no repetimos. */}
       <Text style={estilos.seccion}>Cita con el taller</Text>
       {mensaje && (
-        <Tarjeta style={{ borderColor: COLORES.alDia }}>
-          <Text style={estilos.confirmacion}>✅ {mensaje}</Text>
+        <Tarjeta style={{ backgroundColor: COLORES.alDiaFondo }}>
+          <Text style={[estilos.confirmacion, { color: COLORES.alDia }]}>✅ {mensaje}</Text>
         </Tarjeta>
       )}
 
       {citaPendiente && !mensaje && (
-        <Tarjeta style={{ borderColor: COLORES.primario }}>
-          <Text style={estilos.confirmacion}>
-            📅 Ya tienes una cita {citaPendiente.estado === 'confirmada' ? 'confirmada' : 'solicitada'}{' '}
-            para el {citaPendiente.fecha}.
+        <Tarjeta style={{ backgroundColor: COLORES.primarioSuave }}>
+          <Text style={[estilos.confirmacion, { color: COLORES.primarioOscuro }]}>
+            📅 Ya tienes una cita{' '}
+            {citaPendiente.estado === 'confirmada' ? 'confirmada' : 'solicitada'} para el{' '}
+            {citaPendiente.fecha}.
             {citaPendiente.estado === 'solicitada' ? ' El taller te confirmará.' : ''}
           </Text>
         </Tarjeta>
       )}
 
       {!citaPendiente && !mensaje && !pidiendoCita && (
-        <Boton titulo="Pedir cita 📅" onPress={() => setPidiendoCita(true)} />
+        <Boton titulo="📅  Pedir cita" onPress={() => setPidiendoCita(true)} />
       )}
 
       {pidiendoCita && (
@@ -143,9 +145,7 @@ export default function Vehiculo({ route }) {
                 onPress={() => setFecha(op.valor)}
                 style={[estilos.chipFecha, fecha === op.valor && estilos.chipElegido]}
               >
-                <Text
-                  style={[estilos.chipTexto, fecha === op.valor && estilos.chipTextoElegido]}
-                >
+                <Text style={[estilos.chipTexto, fecha === op.valor && estilos.chipTextoElegido]}>
                   {op.etiqueta}
                 </Text>
                 <Text
@@ -185,7 +185,7 @@ export default function Vehiculo({ route }) {
           <Text style={estilos.seccion}>Últimas visitas al taller</Text>
           <Tarjeta>
             {vehiculo.historial.map((h, i) => (
-              <View key={i} style={[estilos.filaHist, i > 0 && estilos.filaMantBorde]}>
+              <View key={i} style={[estilos.filaHist, i > 0 && estilos.filaBorde]}>
                 <Text style={estilos.fechaHist}>{h.fecha}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={estilos.descHist}>{h.descripcion || 'Visita al taller'}</Text>
@@ -216,60 +216,71 @@ const estilos = StyleSheet.create({
   },
   cabecera: {
     alignItems: 'center',
-    marginBottom: ESPACIO.m,
+    paddingVertical: ESPACIO.l,
   },
   marca: {
     color: COLORES.texto,
     fontSize: LETRA.subtitulo,
-    fontWeight: '600',
+    fontWeight: '700',
     marginTop: ESPACIO.m,
+  },
+  cajitaKm: {
+    backgroundColor: COLORES.fondo,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: ESPACIO.m,
+    marginTop: ESPACIO.s,
   },
   km: {
     color: COLORES.textoSuave,
     fontSize: LETRA.pequena,
-    marginTop: ESPACIO.xs,
+  },
+  kmNumero: {
+    color: COLORES.texto,
+    fontWeight: '800',
   },
   seccion: {
     color: COLORES.textoSuave,
     fontSize: LETRA.pequena,
-    fontWeight: '700',
+    fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginTop: ESPACIO.l,
     marginBottom: ESPACIO.s,
+    marginLeft: ESPACIO.xs,
   },
   filaMant: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingVertical: ESPACIO.m,
   },
-  filaMantBorde: {
+  filaBorde: {
     borderTopWidth: 1,
     borderTopColor: COLORES.borde,
   },
   nombreMant: {
     color: COLORES.texto,
     fontSize: LETRA.normal,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   fraseMant: {
     fontSize: LETRA.pequena,
     marginTop: 2,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   fraseSuave: {
     color: COLORES.textoSuave,
     fontSize: LETRA.normal,
   },
   confirmacion: {
-    color: COLORES.texto,
     fontSize: LETRA.normal,
     lineHeight: 24,
+    fontWeight: '600',
   },
   pregunta: {
     color: COLORES.texto,
     fontSize: LETRA.normal,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: ESPACIO.s,
   },
   filaFechas: {
@@ -281,14 +292,15 @@ const estilos = StyleSheet.create({
     flex: 1,
     borderWidth: 1.5,
     borderColor: COLORES.borde,
-    borderRadius: 12,
+    borderRadius: RADIO.campo,
     paddingVertical: ESPACIO.m,
     alignItems: 'center',
-    minHeight: 52,
+    minHeight: 54,
+    backgroundColor: COLORES.fondo,
   },
   chipElegido: {
     borderColor: COLORES.primario,
-    backgroundColor: COLORES.primario + '33',
+    backgroundColor: COLORES.primarioSuave,
   },
   chipTexto: {
     color: COLORES.texto,
@@ -296,7 +308,7 @@ const estilos = StyleSheet.create({
     fontWeight: '700',
   },
   chipTextoElegido: {
-    color: '#93c5fd',
+    color: COLORES.primarioOscuro,
   },
   chipFechaChica: {
     color: COLORES.textoSuave,
@@ -307,7 +319,7 @@ const estilos = StyleSheet.create({
     backgroundColor: COLORES.fondo,
     borderWidth: 1,
     borderColor: COLORES.borde,
-    borderRadius: 12,
+    borderRadius: RADIO.campo,
     color: COLORES.texto,
     fontSize: LETRA.normal,
     padding: ESPACIO.m,

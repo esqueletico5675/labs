@@ -4,8 +4,7 @@
 // Poquitas cosas, bien claras: quién soy, de qué taller soy cliente,
 // y cerrar sesión. (Las notificaciones push llegarán aquí luego.)
 
-import { StyleSheet, Text } from 'react-native';
-import { ScrollView } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { Boton, Tarjeta } from '../componentes';
 import { useSesion } from '../sesion';
 import { COLORES, ESPACIO, LETRA } from '../tema';
@@ -53,7 +52,7 @@ const estilos = StyleSheet.create({
   etiqueta: {
     color: COLORES.textoSuave,
     fontSize: LETRA.pequena,
-    fontWeight: '700',
+    fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: ESPACIO.xs,
@@ -61,7 +60,7 @@ const estilos = StyleSheet.create({
   valor: {
     color: COLORES.texto,
     fontSize: LETRA.subtitulo,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   parrafo: {
     color: COLORES.texto,

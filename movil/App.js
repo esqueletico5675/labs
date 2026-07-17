@@ -19,7 +19,7 @@ const Pila = createNativeStackNavigator();
 
 // Tema del navegador: que las barras y fondos usen NUESTROS colores.
 const temaNavegacion = {
-  dark: true,
+  dark: false,
   colors: {
     primary: COLORES.primario,
     background: COLORES.fondo,
@@ -47,7 +47,7 @@ function Pantallas() {
     return (
       <>
         <Entrar />
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
       </>
     );
   }
@@ -57,9 +57,9 @@ function Pantallas() {
     <NavigationContainer theme={temaNavegacion}>
       <Pila.Navigator
         screenOptions={{
-          headerStyle: { backgroundColor: COLORES.tarjeta },
+          headerStyle: { backgroundColor: COLORES.fondo },
           headerTintColor: COLORES.texto,
-          headerTitleStyle: { fontWeight: '700' },
+          headerTitleStyle: { fontWeight: '800' },
           headerShadowVisible: false,
         }}
       >
@@ -78,7 +78,7 @@ function Pantallas() {
         />
         <Pila.Screen name="Ajustes" component={Ajustes} options={{ title: 'Ajustes' }} />
       </Pila.Navigator>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
     </NavigationContainer>
   );
 }
