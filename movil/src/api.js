@@ -125,3 +125,102 @@ export function cambiarEstadoCita(jwt, tallerId, citaId, estado) {
     body: JSON.stringify({ estado }),
   });
 }
+
+// --- Enviar los recordatorios pendientes AHORA (sin esperar la tarea
+//     diaria). El backend revisa todo el taller y devuelve un resumen. ---
+export function enviarRecordatoriosAhora(jwt, tallerId) {
+  return pedir(`/talleres/${tallerId}/enviar-recordatorios`, {
+    method: 'POST', headers: conJwt(jwt),
+  });
+}
+
+// --- CLIENTES del taller ---
+export function listarClientes(jwt, tallerId) {
+  return pedir(`/talleres/${tallerId}/clientes`, { headers: conJwt(jwt) });
+}
+export function obtenerCliente(jwt, tallerId, clienteId) {
+  return pedir(`/talleres/${tallerId}/clientes/${clienteId}`, { headers: conJwt(jwt) });
+}
+export function crearCliente(jwt, tallerId, datos) {
+  // datos: { nombre, email, telefono, consentimiento } — sin consentimiento
+  // el backend responde 422 (Habeas Data, Ley 1581).
+  return pedir(`/talleres/${tallerId}/clientes`, {
+    method: 'POST', headers: conJwt(jwt), body: JSON.stringify(datos),
+  });
+}
+export function actualizarCliente(jwt, tallerId, clienteId, datos) {
+  return pedir(`/talleres/${tallerId}/clientes/${clienteId}`, {
+    method: 'PATCH', headers: conJwt(jwt), body: JSON.stringify(datos),
+  });
+}
+export function enlacePortal(jwt, tallerId, clienteId) {
+  return pedir(`/talleres/${tallerId}/clientes/${clienteId}/enlace-portal`, {
+    headers: conJwt(jwt),
+  });
+}
+export function regenerarToken(jwt, tallerId, clienteId) {
+  // Solo admin: anula el enlace viejo del cliente y crea uno nuevo.
+  return pedir(`/talleres/${tallerId}/clientes/${clienteId}/regenerar-token`, {
+    method: 'POST', headers: conJwt(jwt),
+  });
+}
+export function suprimirDatos(jwt, tallerId, clienteId) {
+  // Solo admin: derecho a supresión (Habeas Data). Anonimiza al cliente.
+  return pedir(`/talleres/${tallerId}/clientes/${clienteId}/datos-personales`, {
+    method: 'DELETE', headers: conJwt(jwt),
+  });
+}
+
+// --- VEHÍCULOS del taller ---
+export function listarVehiculos(jwt, tallerId) {
+  return pedir(`/talleres/${tallerId}/vehiculos`, { headers: conJwt(jwt) });
+}
+export function crearVehiculo(jwt, tallerId, datos) {
+  // datos: { cliente_id, placa, marca, modelo, anio, km_actual }
+  return pedir(`/talleres/${tallerId}/vehiculos`, {
+    method: 'POST', headers: conJwt(jwt), body: JSON.stringify(datos),
+  });
+}
+export function recordatoriosVehiculo(jwt, vehiculoId) {
+  return pedir(`/vehiculos/${vehiculoId}/recordatorios`, { headers: conJwt(jwt) });
+}
+export function ingresosVehiculo(jwt, vehiculoId) {
+  return pedir(`/vehiculos/${vehiculoId}/ingresos`, { headers: conJwt(jwt) });
+}
+export function crearIngreso(jwt, datos) {
+  // datos: { vehiculo_id, kilometraje, descripcion, tipos_realizados: [ids] }
+  return pedir('/ingresos', {
+    method: 'POST', headers: conJwt(jwt), body: JSON.stringify(datos),
+  });
+}
+
+// --- REGLAS de mantenimiento (tipos) ---
+export function listarTipos(jwt, tallerId) {
+  return pedir(`/talleres/${tallerId}/tipos-mantenimiento`, { headers: conJwt(jwt) });
+}
+export function crearTipo(jwt, tallerId, datos) {
+  return pedir(`/talleres/${tallerId}/tipos-mantenimiento`, {
+    method: 'POST', headers: conJwt(jwt), body: JSON.stringify(datos),
+  });
+}
+export function actualizarTipo(jwt, tallerId, tipoId, datos) {
+  return pedir(`/talleres/${tallerId}/tipos-mantenimiento/${tipoId}`, {
+    method: 'PATCH', headers: conJwt(jwt), body: JSON.stringify(datos),
+  });
+}
+export function eliminarTipo(jwt, tallerId, tipoId) {
+  return pedir(`/talleres/${tallerId}/tipos-mantenimiento/${tipoId}`, {
+    method: 'DELETE', headers: conJwt(jwt),
+  });
+}
+
+// --- EQUIPO del taller (usuarios; solo admin) ---
+export function listarUsuarios(jwt, tallerId) {
+  return pedir(`/talleres/${tallerId}/usuarios`, { headers: conJwt(jwt) });
+}
+export function crearUsuario(jwt, tallerId, datos) {
+  // datos: { nombre, email, clave, rol: "admin" | "mecanico" }
+  return pedir(`/talleres/${tallerId}/usuarios`, {
+    method: 'POST', headers: conJwt(jwt), body: JSON.stringify(datos),
+  });
+}

@@ -12,10 +12,16 @@ import { ProveedorApariencia, useTema } from './src/apariencia';
 import { Cargando } from './src/componentes';
 import Ajustes from './src/pantallas/Ajustes';
 import CitasTaller from './src/pantallas/CitasTaller';
+import ClienteDetalle from './src/pantallas/ClienteDetalle';
+import ClientesTaller from './src/pantallas/ClientesTaller';
 import Entrar from './src/pantallas/Entrar';
+import EquipoTaller from './src/pantallas/EquipoTaller';
 import MisVehiculos from './src/pantallas/MisVehiculos';
+import ReglasTaller from './src/pantallas/ReglasTaller';
 import TableroTaller from './src/pantallas/TableroTaller';
 import Vehiculo from './src/pantallas/Vehiculo';
+import VehiculosTaller from './src/pantallas/VehiculosTaller';
+import VehiculoTaller from './src/pantallas/VehiculoTaller';
 import { ProveedorSesion, useSesion } from './src/sesion';
 
 const Pila = createNativeStackNavigator();
@@ -73,7 +79,7 @@ function Pantallas() {
         }}
       >
         {esTaller ? (
-          /* PERSONAL DEL TALLER: tablero de llamadas y citas. */
+          /* PERSONAL DEL TALLER: todo lo del panel web, en el celular. */
           <>
             <Pila.Screen
               name="TableroTaller"
@@ -84,6 +90,42 @@ function Pantallas() {
               name="CitasTaller"
               component={CitasTaller}
               options={{ title: 'Citas', headerBackTitle: 'Atrás' }}
+            />
+            <Pila.Screen
+              name="ClientesTaller"
+              component={ClientesTaller}
+              options={{ title: 'Clientes', headerBackTitle: 'Atrás' }}
+            />
+            <Pila.Screen
+              name="ClienteDetalle"
+              component={ClienteDetalle}
+              options={({ route }) => ({
+                title: route.params.nombre,
+                headerBackTitle: 'Atrás',
+              })}
+            />
+            <Pila.Screen
+              name="VehiculosTaller"
+              component={VehiculosTaller}
+              options={{ title: 'Vehículos', headerBackTitle: 'Atrás' }}
+            />
+            <Pila.Screen
+              name="VehiculoTaller"
+              component={VehiculoTaller}
+              options={({ route }) => ({
+                title: route.params.vehiculo.placa,
+                headerBackTitle: 'Atrás',
+              })}
+            />
+            <Pila.Screen
+              name="ReglasTaller"
+              component={ReglasTaller}
+              options={{ title: 'Reglas de mantenimiento', headerBackTitle: 'Atrás' }}
+            />
+            <Pila.Screen
+              name="EquipoTaller"
+              component={EquipoTaller}
+              options={{ title: 'Equipo', headerBackTitle: 'Atrás' }}
             />
             <Pila.Screen name="Ajustes" component={Ajustes} options={{ title: 'Ajustes' }} />
           </>

@@ -152,6 +152,13 @@ es la fuente confiable del km (lo registra en cada ingreso).
   ambos: development build con EAS (pendiente). Diseño: UI MUY simple
   para clientes no técnicos (la v1 fue rechazada por confusa) — lenguaje
   cotidiano, estados con color+ícono+palabra+acción, letra grande.
+  **Modo TALLER completo (paridad con el panel web):** login del personal
+  (`/login` OAuth2), y pantallas `TableroTaller` (menú + llamar + enviar
+  recordatorios ahora), `ClientesTaller`/`ClienteDetalle` (crear/editar,
+  consentimiento Ley 1581, enlace del portal, regenerar, supresión),
+  `VehiculosTaller`/`VehiculoTaller` (buscador, registrar ingreso,
+  historial), `CitasTaller`, `ReglasTaller` y `EquipoTaller` (solo admin;
+  el rol viene en la sesión y el backend lo impone).
   Registro de cambios: commit y push a
   https://github.com/esqueletico5675/labs.git (origin, rama master).
 - **PILOTO (en marcha):** la guía completa está en `GUIA_PILOTO.md`

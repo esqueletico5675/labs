@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
-  Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
+  Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import * as api from '../api';
 import { useTema } from '../apariencia';
@@ -26,6 +26,8 @@ export default function TableroTaller({ navigation }) {
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState(null);
   const [refrescando, setRefrescando] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [resumenEnvio, setResumenEnvio] = useState(null);
 
   async function cargar() {
     setError(null);
@@ -65,6 +67,39 @@ export default function TableroTaller({ navigation }) {
     setRefrescando(false);
   }
 
+  // Manda los avisos pendientes YA, sin esperar la tarea diaria.
+  // El backend evita repetir avisos de los últimos 7 días.
+  function confirmarEnvio() {
+    Alert.alert(
+      '¿Enviar recordatorios ahora?',
+      'Se les avisará por correo/push a los dueños con mantenimientos vencidos o próximos. Los ya avisados esta semana no se repiten.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sí, enviar',
+          onPress: async () => {
+            setError(null);
+            setResumenEnvio(null);
+            setEnviando(true);
+            try {
+              const r = await api.enviarRecordatoriosAhora(sesion.jwt, sesion.tallerId);
+              const enviados = (r.correos || 0) + (r.push || 0) + (r.whatsapp || 0);
+              setResumenEnvio(
+                enviados === 0
+                  ? 'Nada que enviar: todos al día o ya avisados esta semana.'
+                  : `Listo ✅ ${enviados} aviso${enviados === 1 ? '' : 's'} enviado${enviados === 1 ? '' : 's'}.`
+              );
+            } catch (e) {
+              setError(e.message);
+            } finally {
+              setEnviando(false);
+            }
+          },
+        },
+      ]
+    );
+  }
+
   if (!datos && !error) return <Cargando mensaje="Revisando los vehículos…" />;
 
   const tablero = datos ? datos.tablero : [];
@@ -99,7 +134,21 @@ export default function TableroTaller({ navigation }) {
         </View>
       )}
 
+      {/* El menú del taller: todo lo del panel web, a un toque. */}
+      <View style={estilos.menu}>
+        <BotonMenu texto="👥 Clientes" alIr={() => navigation.navigate('ClientesTaller')} estilos={estilos} />
+        <BotonMenu texto="🚛 Vehículos" alIr={() => navigation.navigate('VehiculosTaller')} estilos={estilos} />
+        <BotonMenu texto="📅 Citas" alIr={() => navigation.navigate('CitasTaller')} estilos={estilos} />
+        <BotonMenu texto="📋 Reglas" alIr={() => navigation.navigate('ReglasTaller')} estilos={estilos} />
+        {sesion.rol === 'admin' && (
+          <BotonMenu texto="👷 Equipo" alIr={() => navigation.navigate('EquipoTaller')} estilos={estilos} />
+        )}
+      </View>
+
+      <Text style={estilos.seccion}>¿A quién llamar hoy?</Text>
+
       <CajaError mensaje={error} />
+      {resumenEnvio && <Text style={estilos.exito}>{resumenEnvio}</Text>}
 
       {tablero.map((v) => (
         <Tarjeta key={v.vehiculo_id}>
@@ -144,6 +193,19 @@ export default function TableroTaller({ navigation }) {
           </Text>
         </Tarjeta>
       )}
+
+      {/* Enviar los avisos sin esperar la tarea diaria (igual que el panel web). */}
+      {datos && tablero.length > 0 && (
+        <Pressable
+          onPress={confirmarEnvio}
+          disabled={enviando}
+          style={({ pressed }) => [estilos.botonEnviar, { opacity: enviando ? 0.5 : pressed ? 0.8 : 1 }]}
+        >
+          <Text style={estilos.botonEnviarTexto}>
+            {enviando ? 'Enviando…' : '📨 Enviar recordatorios ahora'}
+          </Text>
+        </Pressable>
+      )}
     </ScrollView>
   );
 }
@@ -151,6 +213,18 @@ export default function TableroTaller({ navigation }) {
 // "Ana Torres" -> "Ana".
 function primerNombre(nombreCompleto) {
   return (nombreCompleto || '').trim().split(' ')[0] || 'equipo';
+}
+
+// Botón grande del menú del taller (mitad del ancho, bien tocable).
+function BotonMenu({ texto, alIr, estilos }) {
+  return (
+    <Pressable
+      onPress={alIr}
+      style={({ pressed }) => [estilos.botonMenu, { opacity: pressed ? 0.8 : 1 }]}
+    >
+      <Text style={estilos.botonMenuTexto}>{texto}</Text>
+    </Pressable>
+  );
 }
 
 // Los estilos dependen de la paleta activa: se crean con ella.
@@ -191,6 +265,37 @@ function crearEstilos(c) {
       fontWeight: '600',
       flex: 1,
       lineHeight: 22,
+    },
+    menu: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: ESPACIO.s,
+      marginBottom: ESPACIO.s,
+    },
+    botonMenu: {
+      backgroundColor: c.tarjeta,
+      borderRadius: RADIO.campo,
+      paddingVertical: ESPACIO.m,
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: 56,
+      flexBasis: '48%',
+      flexGrow: 1,
+    },
+    botonMenuTexto: {
+      color: c.texto,
+      fontSize: LETRA.normal,
+      fontWeight: '800',
+    },
+    seccion: {
+      color: c.textoSuave,
+      fontSize: LETRA.pequena,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginTop: ESPACIO.m,
+      marginBottom: ESPACIO.s,
+      marginLeft: ESPACIO.xs,
     },
     filaSuperior: {
       flexDirection: 'row',
@@ -236,6 +341,28 @@ function crearEstilos(c) {
       fontSize: LETRA.normal,
       textAlign: 'center',
       lineHeight: 26,
+    },
+    exito: {
+      color: c.alDia,
+      fontSize: LETRA.pequena,
+      fontWeight: '700',
+      marginBottom: ESPACIO.s,
+      marginLeft: ESPACIO.xs,
+    },
+    botonEnviar: {
+      borderWidth: 1.5,
+      borderColor: c.borde,
+      borderRadius: RADIO.campo,
+      minHeight: 52,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: ESPACIO.m,
+      marginTop: ESPACIO.s,
+    },
+    botonEnviarTexto: {
+      color: c.texto,
+      fontSize: LETRA.pequena,
+      fontWeight: '800',
     },
   });
 }

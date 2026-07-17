@@ -4,7 +4,9 @@
 // v3: cada pieza lee la paleta activa con useTema(). La GEOMETRÍA
 // (tamaños, radios, márgenes) es fija; los COLORES vienen del tema.
 
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View,
+} from 'react-native';
 import { useTema } from './apariencia';
 import { ALTO_TOQUE, ESPACIO, LETRA, RADIO, SOMBRA, infoEstado } from './tema';
 
@@ -120,6 +122,51 @@ export function Cargando({ mensaje = 'Un momento…' }) {
   );
 }
 
+// --- Campo de formulario: etiqueta + cajita de texto, igual en toda la app ---
+export function Campo({ etiqueta, valor, alCambiar, ...resto }) {
+  const { colores } = useTema();
+  return (
+    <View style={{ marginBottom: ESPACIO.m }}>
+      <Text style={[estilos.campoEtiqueta, { color: colores.texto }]}>{etiqueta}</Text>
+      <TextInput
+        style={[
+          estilos.campoCaja,
+          {
+            backgroundColor: colores.fondo,
+            borderColor: colores.borde,
+            color: colores.texto,
+          },
+        ]}
+        value={valor}
+        onChangeText={alCambiar}
+        placeholderTextColor={colores.textoSuave}
+        {...resto}
+      />
+    </View>
+  );
+}
+
+// --- Casilla: fila tocable con ✓ (consentimientos, opciones sí/no) ---
+export function Casilla({ texto, activo, alCambiar }) {
+  const { colores } = useTema();
+  return (
+    <Pressable onPress={() => alCambiar(!activo)} style={estilos.casillaFila}>
+      <View
+        style={[
+          estilos.casillaCuadro,
+          {
+            borderColor: activo ? colores.primario : colores.borde,
+            backgroundColor: activo ? colores.primario : colores.fondo,
+          },
+        ]}
+      >
+        {activo && <Text style={{ color: colores.blanco, fontWeight: '900' }}>✓</Text>}
+      </View>
+      <Text style={[estilos.casillaTexto, { color: colores.texto }]}>{texto}</Text>
+    </Pressable>
+  );
+}
+
 // --- Caja de error: explica qué pasó y qué hacer, sin tecnicismos ---
 export function CajaError({ mensaje }) {
   const { colores } = useTema();
@@ -216,6 +263,38 @@ const estilos = StyleSheet.create({
   cargandoTexto: {
     fontSize: LETRA.normal,
     marginTop: ESPACIO.m,
+  },
+  campoEtiqueta: {
+    fontSize: LETRA.pequena,
+    fontWeight: '700',
+    marginBottom: ESPACIO.xs,
+  },
+  campoCaja: {
+    borderWidth: 1,
+    borderRadius: RADIO.campo,
+    fontSize: LETRA.normal,
+    padding: ESPACIO.m,
+    minHeight: 52,
+  },
+  casillaFila: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ESPACIO.m,
+    marginBottom: ESPACIO.m,
+    minHeight: ALTO_TOQUE,
+  },
+  casillaCuadro: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  casillaTexto: {
+    flex: 1,
+    fontSize: LETRA.pequena,
+    lineHeight: 20,
   },
   cajaError: {
     borderRadius: RADIO.campo,
