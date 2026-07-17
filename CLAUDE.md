@@ -133,6 +133,27 @@ es la fuente confiable del km (lo registra en cada ingreso).
   por vehículo), y el taller las gestiona en la sección "Citas" del panel
   (`GET/PATCH /talleres/{id}/citas`). La supresión Habeas Data también
   apaga el login del cliente.
+- **APP MÓVIL (en curso, 2026-07):** app NATIVA con **React Native + Expo**
+  en `movil/` (reemplaza la decisión vieja de "solo PWA" para el cliente).
+  **SDK 54** (no subir sin verificar qué soporta el Expo Go del equipo).
+  Estructura: `src/tema.js` (sistema de diseño, PALETAS claro/oscuro),
+  `src/apariencia.js` (modo claro/oscuro, elegible en Ajustes),
+  `src/api.js` (única puerta al backend; la IP local del PC va ahí),
+  `src/sesion.js` (login persistente con AsyncStorage), `src/avisos.js`
+  (push), `src/componentes.js` y `src/pantallas/` (Entrar, MisVehiculos,
+  Vehiculo, Ajustes). Correr: `npx expo start` en `movil/` + Expo Go en el
+  celular (mismo WiFi; uvicorn con `--host 0.0.0.0`). **Push de punta a
+  punta:** la app registra su ExponentPushToken en POST
+  `/portal/{token}/push-movil` (tabla `suscripciones_push` con
+  `tipo="expo"`); `enviar_push_expo()` en `notificaciones.py` manda vía el
+  servicio gratis de Expo y el envío diario elige canal según `tipo`;
+  prueba rápida con `probar_push_movil.py`. OJO: en Expo Go Android las
+  push remotas no funcionan (limitación de Expo Go); en iPhone sí. Para
+  ambos: development build con EAS (pendiente). Diseño: UI MUY simple
+  para clientes no técnicos (la v1 fue rechazada por confusa) — lenguaje
+  cotidiano, estados con color+ícono+palabra+acción, letra grande.
+  Registro de cambios: commit y push a
+  https://github.com/esqueletico5675/labs.git (origin, rama master).
 - **PILOTO (en marcha):** la guía completa está en `GUIA_PILOTO.md`
   (Supabase + Render + Gmail + cron). **DECISIÓN MVP: el canal de
   recordatorios es el CORREO** (ya construido, gratis, sin aprobaciones);
