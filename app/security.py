@@ -23,7 +23,18 @@ from .utilidades import ahora_utc
 # La "llave" con la que se firman los tokens. En desarrollo usamos un valor
 # por defecto, pero en producción DEBE venir de una variable de entorno
 # (si alguien conoce esta llave, puede fabricar carnés falsos).
-JWT_SECRETO = os.environ.get("JWT_SECRETO", "llave-solo-para-desarrollo-cambiame-en-produccion")
+#
+# FASE 5: si el servidor arranca con ENTORNO=produccion y no le dieron una
+# llave real, se NIEGA a arrancar. Es mejor un error ruidoso al desplegar
+# que un sistema entero firmado con la llave que está publicada en GitHub.
+JWT_SECRETO = os.environ.get("JWT_SECRETO")
+if not JWT_SECRETO:
+    if os.environ.get("ENTORNO") == "produccion":
+        raise RuntimeError(
+            "ENTORNO=produccion exige definir la variable JWT_SECRETO "
+            "(genera una con: python -c \"import secrets; print(secrets.token_urlsafe(32))\")"
+        )
+    JWT_SECRETO = "llave-solo-para-desarrollo-cambiame-en-produccion"
 JWT_ALGORITMO = "HS256"
 HORAS_VALIDEZ_TOKEN = 8  # una jornada de trabajo; luego toca volver a entrar
 

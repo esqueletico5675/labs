@@ -1,3 +1,5 @@
+
+
 fastapi
 uvicorn[standard]
 sqlalchemy
@@ -6,3 +8,4 @@ bcrypt
 pyjwt
 python-multipart
 pywebpush
+psycopg2-binary

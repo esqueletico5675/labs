@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual del Panel del Taller</title>
+  <meta name="theme-color" content="#0b0f16">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --fondo: #0b0f16; --panel: #10161f; --panel2: #0d1119;
+      --borde: #1f2937; --tinta: #e6edf5; --tinta2: #94a3b8;
+      --ok: #059669; --alerta: #d97706; --critico: #ef4444; --lcd: #f59e0b;
+    }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: radial-gradient(1200px 500px at 50% -10%, #131c2b 0%, var(--fondo) 60%);
+      color: var(--tinta); line-height: 1.65; padding: 1.5rem 1rem 4rem;
+    }
+    article { max-width: 720px; margin: 0 auto; }
+    .volver { color: #93c5fd; font-size: .85rem; display: inline-block; margin-bottom: 1.2rem; }
+    h1 { font-size: 1.2rem; letter-spacing: .06em; text-transform: uppercase; }
+    .sub { color: var(--tinta2); font-size: .85rem; margin: .3rem 0 1.4rem; }
+
+    /* índice */
+    nav.indice {
+      background: var(--panel); border: 1px solid var(--borde); border-radius: 14px;
+      padding: 1rem 1.2rem; margin-bottom: 1.5rem;
+    }
+    nav.indice ol { padding-left: 1.2rem; }
+    nav.indice li { margin: .25rem 0; font-size: .88rem; }
+    nav.indice a { color: #93c5fd; text-decoration: none; }
+    nav.indice a:hover { text-decoration: underline; }
+
+    section {
+      background: linear-gradient(180deg, #131b27 0%, var(--panel) 22%);
+      border: 1px solid var(--borde); border-radius: 14px;
+      padding: 1.1rem 1.2rem 1.3rem; margin-bottom: 1rem;
+      scroll-margin-top: 1rem;
+    }
+    h2 {
+      font-size: .95rem; letter-spacing: .05em; text-transform: uppercase;
+      color: var(--lcd); margin-bottom: .6rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    h2 .numero {
+      background: var(--panel2); border: 1px solid var(--borde);
+      border-radius: 8px; width: 1.7rem; height: 1.7rem; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-family: ui-monospace, Consolas, monospace; font-size: .85rem;
+    }
+    p, li { font-size: .89rem; color: #cbd5e1; }
+    section ul, section ol { padding-left: 1.25rem; margin: .4rem 0; }
+    section li { margin: .3rem 0; }
+    b { color: var(--tinta); }
+    .paso {
+      background: var(--panel2); border-left: 3px solid var(--lcd);
+      border-radius: 0 8px 8px 0; padding: .6rem .8rem; margin: .6rem 0;
+      font-size: .85rem;
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: .3rem;
+      font-size: .68rem; font-weight: 700; letter-spacing: .04em;
+      padding: .15rem .5rem; border-radius: 999px; text-transform: uppercase;
+    }
+    .chip.vencido { background: rgba(239,68,68,.14); color: #fca5a5; border: 1px solid rgba(239,68,68,.5); }
+    .chip.proximo { background: rgba(217,119,6,.14); color: #fcd34d; border: 1px solid rgba(217,119,6,.5); }
+    .chip.al_dia  { background: rgba(5,150,105,.14); color: #6ee7b7; border: 1px solid rgba(5,150,105,.5); }
+    a { color: #93c5fd; }
+  </style>
+</head>
+<body>
+  <article>
+    <a class="volver" href="index.html">← Volver al panel</a>
+    <h1>Manual del Panel del Taller</h1>
+    <p class="sub">El libro de instrucciones: qué hace cada parte y en qué orden usarla.</p>
+
+    <nav class="indice" aria-label="Índice">
+      <ol>
+        <li><a href="#idea">La idea en 30 segundos</a></li>
+        <li><a href="#entrar">Entrar por primera vez</a></li>
+        <li><a href="#tablero">El Tablero: ¿a quién llamar hoy?</a></li>
+        <li><a href="#clientes">Clientes y su enlace del portal</a></li>
+        <li><a href="#vehiculos">Vehículos</a></li>
+        <li><a href="#ingresos">Registrar un ingreso (el hábito clave)</a></li>
+        <li><a href="#reglas">Reglas de mantenimiento</a></li>
+        <li><a href="#equipo">Equipo y roles</a></li>
+        <li><a href="#portal">Lo que ve tu cliente</a></li>
+        <li><a href="#problemas">Problemas comunes</a></li>
+      </ol>
+    </nav>
+
+    <section id="idea">
+      <h2><span class="numero">1</span> La idea en 30 segundos</h2>
+      <p>
+        El sistema le recuerda a tus clientes cuándo su vehículo necesita
+        mantenimiento, <b>por kilometraje o por tiempo, lo que se cumpla
+        primero</b>. Tú no persigues a nadie: registras cada visita con su
+        kilometraje, y el sistema estima cuánto ha rodado cada carro desde
+        entonces y avisa solo (por correo) cuando algo está por vencerse.
+      </p>
+      <p style="margin-top:.5rem;">
+        Tu único trabajo de verdad: <b>registrar cada ingreso con el
+        kilometraje del día</b>. Todo lo demás sale de ahí.
+      </p>
+    </section>
+
+    <section id="entrar">
+      <h2><span class="numero">2</span> Entrar por primera vez</h2>
+      <ul>
+        <li><b>¿Taller nuevo?</b> En la pantalla de entrada toca
+          "Abre tu cuenta aquí": creas el taller y tu usuario administrador
+          en un solo paso, y entras de inmediato.</li>
+        <li><b>¿Ya te crearon un usuario?</b> Entra con tu correo y
+          contraseña.</li>
+        <li>La sesión dura <b>8 horas</b> (una jornada). Después te pide
+          entrar de nuevo, por seguridad.</li>
+      </ul>
+    </section>
+
+    <section id="tablero">
+      <h2><span class="numero">3</span> El Tablero: ¿a quién llamar hoy?</h2>
+      <p>
+        Es lo primero que ves cada mañana. Muestra SOLO los vehículos que
+        tienen algo pendiente, con el teléfono del dueño listo para marcar.
+      </p>
+      <ul>
+        <li><span class="chip vencido">Vencido</span> — ya tocaba; llamar ya.</li>
+        <li><span class="chip proximo">Próximo</span> — está por cumplirse
+          (le falta menos del 15% del intervalo, o un mes).</li>
+        <li><span class="chip al_dia">Al día</span> — no aparece en el
+          tablero: no hay nada que hacer.</li>
+      </ul>
+      <div class="paso">
+        El botón <b>"Enviar recordatorios"</b> manda los correos pendientes
+        en ese momento. El sistema nunca repite el mismo aviso antes de
+        7 días, así que puedes oprimirlo con confianza. (En producción esto
+        también corre solo, una vez al día.)
+      </div>
+    </section>
+
+    <section id="clientes">
+      <h2><span class="numero">4</span> Clientes y su enlace del portal</h2>
+      <ol>
+        <li><b>Crear:</b> nombre y, muy importante, el <b>correo</b> (sin
+          correo no hay recordatorio automático). Marca la casilla de
+          autorización de datos — la ley colombiana (1581 de 2012) la exige
+          y el sistema no deja crear el cliente sin ella.</li>
+        <li><b>Enlace portal:</b> cada cliente tiene un enlace secreto para
+          ver su vehículo desde el celular. Tócalo → "Copiar" → pégaselo
+          por WhatsApp. <b>Solo a él</b>: quien tenga el enlace ve sus datos.</li>
+        <li><b>Regenerar</b> (solo admin): si el enlace se filtró, genera
+          uno nuevo; el viejo muere al instante.</li>
+        <li><b>Suprimir datos</b> (solo admin): si el cliente pide que
+          borren sus datos, este botón elimina nombre, teléfono y correo
+          para siempre. El historial del vehículo queda anónimo.</li>
+      </ol>
+    </section>
+
+    <section id="vehiculos">
+      <h2><span class="numero">5</span> Vehículos</h2>
+      <ul>
+        <li>Cada vehículo pertenece a un cliente (créalo primero).</li>
+        <li>Al crearlo se pide el <b>kilometraje actual</b> una única vez.
+          Después el km <b>no se edita a mano</b>: se actualiza registrando
+          ingresos. Así el historial siempre es confiable.</li>
+        <li>"Estado e historial" despliega los medidores de ese carro y
+          todas sus visitas.</li>
+      </ul>
+    </section>
+
+    <section id="ingresos">
+      <h2><span class="numero">6</span> Registrar un ingreso (el hábito clave)</h2>
+      <p><b>Cada vez que un carro entre al taller</b>, aunque sea por algo menor:</p>
+      <ol>
+        <li>Botón <b>"+ Ingreso"</b> (está en el tablero y en Vehículos).</li>
+        <li>Anota el <b>kilometraje que marca el tablero del carro hoy</b>.</li>
+        <li>Marca qué mantenimientos se hicieron (las casillas).</li>
+        <li>Notas del mecánico: qué aceite, qué marca, qué se vio raro.</li>
+      </ol>
+      <div class="paso">
+        ¿Por qué es tan importante? Con cada kilometraje que registras, el
+        sistema calcula cuánto rueda ese carro al mes y <b>predice</b>
+        cuándo le tocará el próximo mantenimiento. Sin ingresos, no hay
+        recordatorios buenos.
+      </div>
+    </section>
+
+    <section id="reglas">
+      <h2><span class="numero">7</span> Reglas de mantenimiento</h2>
+      <ul>
+        <li>Cada regla dice <b>cada cuántos km o cada cuántos meses</b> toca
+          algo (aplica lo que se cumpla primero).</li>
+        <li>El sistema trae 8 reglas diésel de arranque. Son orientativas:
+          <b>manda el manual del fabricante</b> — ajústalas (solo admin).</li>
+        <li>Puedes crear reglas propias: correa de repartición, calibración
+          de inyectores, lo que tu taller maneje.</li>
+      </ul>
+    </section>
+
+    <section id="equipo">
+      <h2><span class="numero">8</span> Equipo y roles</h2>
+      <ul>
+        <li><b>Administrador:</b> todo — reglas, equipo, enlaces, supresión de datos.</li>
+        <li><b>Mecánico:</b> el trabajo diario — ingresos, clientes,
+          vehículos y el tablero. No puede cambiar la configuración.</li>
+        <li>Solo el admin ve la sección "Equipo" y crea usuarios nuevos.</li>
+      </ul>
+    </section>
+
+    <section id="portal">
+      <h2><span class="numero">9</span> Lo que ve tu cliente</h2>
+      <p>
+        Al abrir su enlace, el cliente ve un tablero de instrumentos: el
+        odómetro con el km estimado de hoy y un medidor por cada
+        mantenimiento (la aguja sube a medida que se acerca la fecha).
+        Puede activar avisos en su celular y ver todo su historial.
+        Es una app instalable: desde el navegador → "Agregar a pantalla de
+        inicio".
+      </p>
+      <p style="margin-top:.5rem;">
+        Los recordatorios le llegan por <b>correo</b> automáticamente:
+        primero cuando algo está próximo, y de nuevo si se vence (nunca
+        más de un aviso por semana del mismo tema).
+      </p>
+    </section>
+
+    <section id="problemas">
+      <h2><span class="numero">10</span> Problemas comunes</h2>
+      <ul>
+        <li><b>"Tu sesión venció"</b> — pasaron 8 horas; entra de nuevo.</li>
+        <li><b>"Demasiados intentos fallidos"</b> — 5 contraseñas malas
+          bloquean el correo 15 minutos. Espera y reintenta.</li>
+        <li><b>Un cliente no recibe correos</b> — revisa que tenga correo
+          bien escrito, y que revise la carpeta de spam la primera vez.</li>
+        <li><b>"Solo el administrador puede hacer esto"</b> — tu usuario es
+          mecánico; pídele el cambio a un admin.</li>
+        <li><b>No aparece nada en el tablero</b> — ¡buena noticia! Ningún
+          vehículo tiene mantenimientos pendientes.</li>
+      </ul>
+    </section>
+  </article>
+</body>
+</html>

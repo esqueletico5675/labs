@@ -29,7 +29,10 @@ puedas probar la regla de "no repetir avisos".)
 
 import json
 import os
+import re
 import smtplib
+import urllib.error
+import urllib.request
 from datetime import timedelta
 from email.message import EmailMessage
 from pathlib import Path
@@ -96,6 +99,142 @@ def enviar_push(db, suscripcion, titulo: str, cuerpo: str) -> bool:
         # este dispositivo no recibió el aviso, pero el proceso del día
         # NUNCA se debe caer por un solo dispositivo dañado.
         return False
+
+
+# ============================================================
+#  WhatsApp (Fase 4) — vía la API oficial de Meta (Cloud API)
+#
+#  Se configura con variables de entorno (nunca en el código):
+#    WHATSAPP_TOKEN     -> el token permanente de la app de Meta
+#    WHATSAPP_PHONE_ID  -> el ID del número emisor (no es el número en sí)
+#    WHATSAPP_PAIS      -> indicativo del país, "57" (Colombia) por defecto
+#
+#  Sin credenciales -> MODO SIMULACIÓN (se imprime en consola), igual que
+#  el correo sin SMTP. Así se desarrolla y prueba sin gastar un peso.
+#
+#  LA REGLA DE ORO DE META (importante para el MVP): un negocio solo puede
+#  mandar TEXTO LIBRE dentro de las 24 horas siguientes al último mensaje
+#  DEL cliente. Un recordatorio proactivo (nuestro caso) exige una
+#  PLANTILLA pre-aprobada por Meta. Por eso hay dos modos:
+#
+#    WHATSAPP_PLANTILLA sin definir -> texto libre (sirve para probar con
+#      el número de prueba de Meta, o si el cliente escribió hace <24 h).
+#    WHATSAPP_PLANTILLA=recordatorio_mantenimiento -> usa la plantilla
+#      aprobada. ESTE es el modo del piloto en producción.
+#
+#  La plantilla sugerida (se registra UNA vez en el panel de Meta,
+#  categoría "Utility", idioma es_CO), con 3 variables:
+#    "Hola {{1}}, del taller te recordamos que tu vehículo {{2}} tiene
+#     pendiente: {{3}}. Responde este mensaje para agendar tu cita."
+# ============================================================
+def normalizar_telefono(telefono: str) -> str:
+    """
+    Deja el número como lo exige la API: solo dígitos con indicativo de país.
+    Ej: "300 123 4567" -> "573001234567" (celular colombiano de 10 dígitos).
+    """
+    digitos = re.sub(r"\D", "", telefono or "")
+    pais = os.environ.get("WHATSAPP_PAIS", "57")
+    if len(digitos) == 10 and not digitos.startswith(pais):
+        digitos = pais + digitos
+    return digitos
+
+
+def _cuerpo_whatsapp(numero: str, texto: str, variables=None) -> dict:
+    """
+    Arma el JSON que espera la API de Meta. Si hay plantilla configurada Y
+    variables, manda mensaje de plantilla (el único que llega de forma
+    proactiva); si no, texto libre (solo sirve dentro de la ventana de 24 h
+    o con el número de prueba de Meta).
+    """
+    plantilla = os.environ.get("WHATSAPP_PLANTILLA")
+    if plantilla and variables:
+        return {
+            "messaging_product": "whatsapp",
+            "to": numero,
+            "type": "template",
+            "template": {
+                "name": plantilla,
+                "language": {"code": os.environ.get("WHATSAPP_IDIOMA", "es_CO")},
+                "components": [{
+                    "type": "body",
+                    "parameters": [{"type": "text", "text": str(v)} for v in variables],
+                }],
+            },
+        }
+    return {
+        "messaging_product": "whatsapp",
+        "to": numero,
+        "type": "text",
+        "text": {"body": texto},
+    }
+
+
+def enviar_whatsapp(telefono: str, texto: str, variables=None) -> str | None:
+    """
+    Envía UN mensaje de WhatsApp. Devuelve "enviado", "simulado", o None
+    si falló (número inválido, sin internet, token vencido...).
+
+    `variables` son los valores para la plantilla (nombre, placa, lista de
+    pendientes). Solo se usan si WHATSAPP_PLANTILLA está configurada.
+    """
+    numero = normalizar_telefono(telefono)
+    if not numero:
+        return None
+
+    token = os.environ.get("WHATSAPP_TOKEN")
+    phone_id = os.environ.get("WHATSAPP_PHONE_ID")
+    cuerpo = _cuerpo_whatsapp(numero, texto, variables)
+
+    if not token or not phone_id:
+        # --- Modo simulación: no hay credenciales de Meta ---
+        print("=" * 60)
+        print("[SIMULACIÓN WHATSAPP — configura WHATSAPP_TOKEN y WHATSAPP_PHONE_ID]")
+        print(f"Para:    +{numero}   (modo: {cuerpo['type']})")
+        print("-" * 60)
+        print(texto)
+        print("=" * 60)
+        return "simulado"
+
+    peticion = urllib.request.Request(
+        f"https://graph.facebook.com/v20.0/{phone_id}/messages",
+        data=json.dumps(cuerpo).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(peticion, timeout=20):
+            return "enviado"
+    except urllib.error.HTTPError as error:
+        # Meta explica el motivo en el cuerpo de la respuesta: lo mostramos
+        # completo, porque "error 400" a secas no le sirve a nadie.
+        detalle = error.read().decode("utf-8", errors="replace")
+        print(f"[WhatsApp] Meta rechazó el envío a +{numero}: {detalle}")
+        return None
+    except Exception as error:
+        # Un número dañado no debe tumbar el proceso del día completo.
+        print(f"[WhatsApp] No se pudo enviar a +{numero}: {error}")
+        return None
+
+
+def redactar_whatsapp(nombre_taller, cliente, vehiculo, pendientes) -> str:
+    """Mensaje corto (WhatsApp no es un correo): saludo, lista y llamado a agendar."""
+    lineas = [f"Hola {cliente.nombre}, te saluda *{nombre_taller}*."]
+    vencidos = [p for p in pendientes if p["estado"] == "vencido"]
+    proximos = [p for p in pendientes if p["estado"] == "proximo"]
+    if vencidos:
+        lineas.append(f"Tu vehículo {vehiculo.placa} tiene mantenimientos *vencidos*:")
+        lineas += [f"• {p['tipo']}" for p in vencidos]
+    if proximos:
+        lineas.append("Próximos a vencerse:")
+        lineas += [f"• {p['tipo']}" for p in proximos]
+    lineas.append("Responde este mensaje para agendar tu cita.")
+    portal_url = os.environ.get("PORTAL_URL")
+    if portal_url and getattr(cliente, "token_acceso", None):
+        lineas.append(f"Estado completo: {portal_url}/app/?t={cliente.token_acceso}")
+    return "\n".join(lineas)
 
 
 # ============================================================
@@ -196,8 +335,9 @@ def enviar_recordatorios_taller(db, taller) -> dict:
         "taller": taller.nombre,
         "correos": 0,
         "push": 0,                    # notificaciones push entregadas
+        "whatsapp": 0,                # mensajes de WhatsApp (Fase 4)
         "avisos": 0,
-        "omitidos_sin_contacto": 0,   # clientes sin correo NI push
+        "omitidos_sin_contacto": 0,   # clientes sin correo, push NI teléfono
         "omitidos_ya_avisados": 0,    # avisos repetidos que evitamos
         "detalle": [],
     }
@@ -214,12 +354,13 @@ def enviar_recordatorios_taller(db, taller) -> dict:
         if not pendientes:
             continue
 
-        # ¿Cómo contactamos al cliente? Por correo, por push, o por ambos.
+        # ¿Cómo contactamos al cliente? Correo, push y/o WhatsApp.
         cliente = vehiculo.cliente
         suscripciones = db.query(models.SuscripcionPush).filter(
             models.SuscripcionPush.cliente_id == cliente.id
         ).all() if cliente else []
-        if not cliente or (not cliente.email and not suscripciones):
+        if not cliente or (not cliente.email and not suscripciones
+                           and not cliente.telefono):
             resumen["omitidos_sin_contacto"] += 1
             continue
 
@@ -253,12 +394,29 @@ def enviar_recordatorios_taller(db, taller) -> dict:
                     push_entregados += 1
             resumen["push"] += push_entregados
 
+        # Y el WhatsApp, si el cliente dejó su teléfono (Fase 4).
+        modo_whatsapp = None
+        if cliente.telefono:
+            texto = redactar_whatsapp(taller.nombre, cliente, vehiculo, nuevos)
+            # Las 3 variables de la plantilla aprobada: {{1}} nombre,
+            # {{2}} placa, {{3}} lista de pendientes separada por comas.
+            variables = (
+                cliente.nombre,
+                vehiculo.placa,
+                ", ".join(p["tipo"] for p in nuevos),
+            )
+            modo_whatsapp = enviar_whatsapp(cliente.telefono, texto, variables)
+            if modo_whatsapp:
+                resumen["whatsapp"] += 1
+
         # Dejamos constancia de cada aviso para no repetirlo mañana.
         canales = []
         if modo:
             canales.append("email" if modo == "enviado" else "email_simulado")
         if push_entregados:
             canales.append("push")
+        if modo_whatsapp:
+            canales.append("whatsapp" if modo_whatsapp == "enviado" else "whatsapp_simulado")
         for p in nuevos:
             db.add(models.RecordatorioEnviado(
                 vehiculo_id=vehiculo.id,
@@ -276,6 +434,7 @@ def enviar_recordatorios_taller(db, taller) -> dict:
             "avisos": [p["tipo"] for p in nuevos],
             "modo": modo,
             "push": push_entregados,
+            "whatsapp": modo_whatsapp,
         })
 
     return resumen

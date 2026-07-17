@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel del Taller</title>
+  <meta name="theme-color" content="#0b0f16">
+  <style>
+    /* =====================================================
+       PANEL DEL TALLER — la herramienta de trabajo diaria.
+       Mismo ADN visual que el portal del cliente (cabina
+       oscura, placa amarilla, colores de estado aptos para
+       daltonismo), pero DENSO: aquí se trabaja, no se mira.
+       El estado nunca depende solo del color: icono + texto.
+       ===================================================== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --fondo: #0b0f16;
+      --panel: #10161f;
+      --panel2: #0d1119;
+      --borde: #1f2937;
+      --tinta: #e6edf5;
+      --tinta2: #94a3b8;
+      --ok: #059669;
+      --alerta: #d97706;
+      --critico: #ef4444;
+      --lcd: #f59e0b;
+      --accion: #2563eb;      /* azul de los botones principales */
+    }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      * { transition: none !important; animation: none !important; }
+    }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: radial-gradient(1200px 500px at 50% -10%, #131c2b 0%, var(--fondo) 60%);
+      color: var(--tinta); min-height: 100vh;
+    }
+    button { font: inherit; cursor: pointer; }
+    input, select, textarea { font: inherit; }
+    a { color: #93c5fd; }
+
+    /* ---------- barra superior ---------- */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: .75rem; padding: .8rem 1.1rem; border-bottom: 1px solid var(--borde);
+      position: sticky; top: 0; background: rgba(11,15,22,.92);
+      backdrop-filter: blur(6px); z-index: 20;
+    }
+    header h1 { font-size: .95rem; letter-spacing: .08em; text-transform: uppercase; }
+    header .quien { font-size: .78rem; color: var(--tinta2); text-align: right; }
+    header .quien b { color: var(--tinta); display: block; }
+    #btn-salir {
+      background: none; border: 1px solid var(--borde); color: var(--tinta2);
+      border-radius: 8px; padding: .5rem .8rem; min-height: 44px;
+      transition: color .2s, border-color .2s;
+    }
+    #btn-salir:hover { color: var(--tinta); border-color: var(--tinta2); }
+
+    /* botón "Manual": el libro de instrucciones del panel */
+    #btn-manual {
+      display: inline-flex; align-items: center; gap: .4rem;
+      background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.4);
+      color: var(--lcd); text-decoration: none; font-size: .8rem;
+      border-radius: 8px; padding: .5rem .8rem; min-height: 44px;
+      transition: background .2s;
+    }
+    #btn-manual:hover { background: rgba(245,158,11,.16); }
+    #btn-manual svg { width: 16px; height: 16px; }
+    @media (max-width: 480px) { #btn-manual span { display: none; } }
+
+    /* ---------- distribución: nav + contenido ---------- */
+    .app { display: none; }               /* se muestra al iniciar sesión */
+    .app.activa { display: block; }
+    main { padding: 1rem; max-width: 1100px; margin: 0 auto 4.5rem; }
+
+    /* nav inferior en móvil, lateral en pantallas grandes */
+    nav {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+      display: flex; background: var(--panel);
+      border-top: 1px solid var(--borde);
+    }
+    nav button {
+      flex: 1; background: none; border: none; color: var(--tinta2);
+      padding: .55rem .25rem .6rem; min-height: 52px;
+      display: flex; flex-direction: column; align-items: center; gap: .2rem;
+      font-size: .68rem; letter-spacing: .04em; text-transform: uppercase;
+      border-top: 2px solid transparent; transition: color .2s;
+    }
+    nav button svg { width: 20px; height: 20px; }
+    nav button.activa { color: var(--lcd); border-top-color: var(--lcd); }
+    nav button:hover { color: var(--tinta); }
+    nav button:focus-visible, button:focus-visible, input:focus-visible,
+    select:focus-visible, textarea:focus-visible, a:focus-visible, summary:focus-visible {
+      outline: 2px solid #60a5fa; outline-offset: 2px;
+    }
+    @media (min-width: 900px) {
+      nav {
+        top: 57px; bottom: auto; left: 0; right: auto; width: 190px; height: calc(100vh - 57px);
+        flex-direction: column; border-top: none; border-right: 1px solid var(--borde);
+        padding-top: .8rem;
+      }
+      nav button {
+        flex: 0 0 auto; flex-direction: row; justify-content: flex-start;
+        gap: .6rem; padding: .7rem 1rem; font-size: .78rem;
+        border-top: none; border-left: 3px solid transparent;
+      }
+      nav button.activa { border-left-color: var(--lcd); background: rgba(245,158,11,.06); }
+      main { margin-left: 205px; }
+    }
+
+    /* ---------- tarjetas y componentes base ---------- */
+    .tarjeta {
+      background: linear-gradient(180deg, #131b27 0%, var(--panel) 22%);
+      border: 1px solid var(--borde); border-radius: 14px;
+      padding: 1rem; margin-bottom: .9rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .titulo-vista {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: .75rem; flex-wrap: wrap; margin: .4rem 0 1rem;
+    }
+    .titulo-vista h2 { font-size: 1.05rem; letter-spacing: .06em; text-transform: uppercase; }
+    .titulo-vista p { font-size: .8rem; color: var(--tinta2); margin-top: .15rem; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: .45rem;
+      background: var(--accion); color: #fff; border: none;
+      border-radius: 10px; padding: .6rem 1rem; min-height: 44px;
+      font-weight: 600; font-size: .85rem;
+      transition: filter .2s, transform .15s;
+    }
+    .btn:hover { filter: brightness(1.15); }
+    .btn:active { transform: scale(.98); }
+    .btn.secundario { background: var(--panel2); color: var(--tinta); border: 1px solid var(--borde); }
+    .btn.peligro { background: rgba(239,68,68,.12); color: #fca5a5; border: 1px solid rgba(239,68,68,.5); }
+    .btn.chico { padding: .4rem .7rem; min-height: 38px; font-size: .78rem; }
+    .btn svg { width: 16px; height: 16px; }
+    .btn[disabled] { opacity: .55; cursor: wait; }
+
+    /* placa colombiana */
+    .placa {
+      background: #f2c500; color: #111; display: inline-block;
+      font-family: ui-monospace, Consolas, monospace; font-weight: 700;
+      font-size: .92rem; letter-spacing: .12em;
+      padding: .22rem .6rem; border-radius: 6px;
+      border: 2px solid #111; box-shadow: inset 0 0 0 2px #f2c500, 0 2px 4px rgba(0,0,0,.4);
+    }
+
+    /* chips de estado (icono + texto SIEMPRE) */
+    .chip {
+      display: inline-flex; align-items: center; gap: .3rem;
+      font-size: .68rem; font-weight: 700; letter-spacing: .04em;
+      padding: .2rem .55rem; border-radius: 999px; text-transform: uppercase;
+    }
+    .chip.vencido { background: rgba(239,68,68,.14); color: #fca5a5; border: 1px solid rgba(239,68,68,.5); }
+    .chip.proximo { background: rgba(217,119,6,.14); color: #fcd34d; border: 1px solid rgba(217,119,6,.5); }
+    .chip.al_dia  { background: rgba(5,150,105,.14); color: #6ee7b7; border: 1px solid rgba(5,150,105,.5); }
+
+    /* indicadores del tablero */
+    .indicadores {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: .7rem; margin-bottom: 1rem;
+    }
+    .indicador {
+      background: var(--panel2); border: 1px solid var(--borde); border-radius: 12px;
+      padding: .75rem .9rem;
+    }
+    .indicador .numero {
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 1.6rem; font-weight: 700; color: var(--lcd);
+      text-shadow: 0 0 10px rgba(245,158,11,.35);
+    }
+    .indicador .numero.rojo { color: #fca5a5; text-shadow: 0 0 10px rgba(239,68,68,.35); }
+    .indicador .numero.verde { color: #6ee7b7; text-shadow: 0 0 10px rgba(5,150,105,.35); }
+    .indicador .texto { font-size: .72rem; color: var(--tinta2); margin-top: .15rem; letter-spacing: .04em; text-transform: uppercase; }
+
+    /* filas de listas (clientes, vehículos, reglas) */
+    .fila {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: .75rem; flex-wrap: wrap;
+      padding: .7rem .2rem; border-bottom: 1px solid var(--borde);
+    }
+    .fila:last-child { border-bottom: none; }
+    .fila .datos { min-width: 0; }
+    .fila .datos b { display: block; font-size: .92rem; }
+    .fila .datos span { font-size: .78rem; color: var(--tinta2); }
+    .fila .acciones { display: flex; gap: .4rem; flex-wrap: wrap; }
+
+    .mono { font-family: ui-monospace, Consolas, monospace; }
+    .vacio { color: var(--tinta2); font-size: .85rem; text-align: center; padding: 1.2rem 0; }
+
+    /* ---------- formularios (en ventanas <dialog>) ---------- */
+    dialog {
+      background: var(--panel); color: var(--tinta);
+      border: 1px solid var(--borde); border-radius: 16px;
+      padding: 1.2rem; width: min(480px, calc(100vw - 2rem));
+      margin: auto;
+    }
+    dialog::backdrop { background: rgba(0,0,0,.6); backdrop-filter: blur(2px); }
+    dialog h3 { font-size: .95rem; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 1rem; }
+    .campo { margin-bottom: .85rem; }
+    .campo label { display: block; font-size: .78rem; color: var(--tinta2); margin-bottom: .3rem; }
+    .campo input, .campo select, .campo textarea {
+      width: 100%; background: var(--panel2); color: var(--tinta);
+      border: 1px solid var(--borde); border-radius: 8px;
+      padding: .6rem .7rem; min-height: 44px;
+    }
+    .campo textarea { min-height: 70px; resize: vertical; }
+    .ayuda { font-size: .7rem; color: var(--tinta2); margin-top: .25rem; }
+    .campos-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+    .pie-dialogo { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1.1rem; }
+    .error-form { color: #fca5a5; font-size: .78rem; margin-top: .6rem; min-height: 1em; }
+
+    /* lista de mantenimientos hechos en un ingreso (checkboxes) */
+    .lista-chequeo { display: grid; gap: .35rem; max-height: 200px; overflow-y: auto; }
+    .lista-chequeo label {
+      display: flex; align-items: center; gap: .5rem; font-size: .82rem;
+      background: var(--panel2); border: 1px solid var(--borde);
+      border-radius: 8px; padding: .5rem .6rem; cursor: pointer;
+    }
+    .lista-chequeo input { width: 1.05rem; height: 1.05rem; accent-color: var(--accion); }
+
+    /* ---------- pantalla de login ---------- */
+    #vista-login {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    #vista-login form {
+      background: linear-gradient(180deg, #131b27 0%, var(--panel) 22%);
+      border: 1px solid var(--borde); border-radius: 16px;
+      padding: 1.6rem 1.4rem; width: min(380px, 100%);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    #vista-login h1 { font-size: 1.05rem; letter-spacing: .08em; text-transform: uppercase; }
+    #vista-login .sub { font-size: .8rem; color: var(--tinta2); margin: .3rem 0 1.2rem; }
+    #vista-login .btn { width: 100%; justify-content: center; margin-top: .3rem; }
+
+    /* ---------- avisos flotantes (toast) ---------- */
+    #toast {
+      position: fixed; left: 50%; bottom: 70px; transform: translateX(-50%);
+      background: #1c2431; color: var(--tinta); border: 1px solid var(--borde);
+      border-radius: 10px; padding: .7rem 1rem; font-size: .84rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,.5); z-index: 50;
+      opacity: 0; pointer-events: none; transition: opacity .25s;
+      max-width: calc(100vw - 2rem); text-align: center;
+    }
+    #toast.visible { opacity: 1; }
+    #toast.error { border-color: rgba(239,68,68,.6); color: #fca5a5; }
+    @media (min-width: 900px) { #toast { bottom: 24px; } }
+
+    /* lo marcado .solo-admin solo existe para administradores */
+    body:not(.es-admin) .solo-admin { display: none !important; }
+
+    .enlace-cambio {
+      background: none; border: none; color: #93c5fd; font-size: .8rem;
+      text-decoration: underline; margin-top: 1rem; padding: .4rem 0;
+      display: inline-block;
+    }
+
+    details.historial { margin-top: .6rem; }
+    details.historial summary { cursor: pointer; font-size: .78rem; color: var(--tinta2); text-transform: uppercase; letter-spacing: .05em; }
+    .bitacora {
+      margin-top: .5rem; background: var(--panel2); border: 1px dashed #273244;
+      border-radius: 10px; padding: .7rem .85rem;
+      font-family: ui-monospace, Consolas, monospace; font-size: .76rem;
+      color: var(--tinta2); line-height: 1.7; overflow-x: auto;
+    }
+    .bitacora b { color: var(--tinta); font-weight: 600; }
+    .pendientes-lista { display: flex; gap: .35rem; flex-wrap: wrap; margin-top: .45rem; }
+  </style>
+</head>
+<body>
+
+  <!-- ============ PANTALLA DE LOGIN / REGISTRO ============ -->
+  <section id="vista-login">
+    <form id="form-login">
+      <h1>Panel del Taller</h1>
+      <p class="sub">Entra con tu correo y contraseña de personal del taller.</p>
+      <div class="campo">
+        <label for="login-email">Correo</label>
+        <input id="login-email" type="email" autocomplete="username" required>
+      </div>
+      <div class="campo">
+        <label for="login-clave">Contraseña</label>
+        <input id="login-clave" type="password" autocomplete="current-password" required>
+      </div>
+      <button class="btn" type="submit" id="btn-login">Iniciar sesión</button>
+      <p class="error-form" id="login-error" role="alert"></p>
+      <button class="enlace-cambio" type="button" id="ir-registro">¿Taller nuevo? Abre tu cuenta aquí</button>
+      <br>
+      <a class="enlace-cambio" href="manual.html">📖 ¿Cómo funciona? Lee el manual</a>
+    </form>
+
+    <!-- registro: crea el taller y su administrador en un paso -->
+    <form id="form-registro" hidden>
+      <h1>Abrir cuenta</h1>
+      <p class="sub">Crea tu taller y tu usuario administrador. Gratis para empezar.</p>
+      <div class="campo">
+        <label for="reg-taller-nombre">Nombre del taller</label>
+        <input id="reg-taller-nombre" required minlength="2" placeholder="Taller Diésel El Motor">
+      </div>
+      <div class="campo">
+        <label for="reg-taller-email">Correo del taller</label>
+        <input id="reg-taller-email" type="email" required>
+      </div>
+      <div class="campo">
+        <label for="reg-nombre">Tu nombre</label>
+        <input id="reg-nombre" required minlength="2" autocomplete="name">
+      </div>
+      <div class="campo">
+        <label for="reg-email">Tu correo (será tu usuario)</label>
+        <input id="reg-email" type="email" required autocomplete="username">
+      </div>
+      <div class="campo">
+        <label for="reg-clave">Contraseña</label>
+        <input id="reg-clave" type="password" required minlength="6" autocomplete="new-password">
+        <p class="ayuda">Mínimo 6 caracteres.</p>
+      </div>
+      <button class="btn" type="submit" id="btn-registro">Crear mi taller</button>
+      <p class="ayuda" style="margin-top:.6rem;">Al crear la cuenta aceptas la
+        <a href="/app/privacidad.html" target="_blank">política de tratamiento de datos</a>
+        y te comprometes a pedir autorización a tus clientes (Ley 1581/2012).</p>
+      <p class="error-form" id="registro-error" role="alert"></p>
+      <button class="enlace-cambio" type="button" id="ir-login">Ya tengo cuenta: iniciar sesión</button>
+    </form>
+  </section>
+
+  <!-- ============ LA APLICACIÓN (tras el login) ============ -->
+  <div class="app" id="app">
+    <header>
+      <h1>Panel del Taller</h1>
+      <div style="display:flex; align-items:center; gap:.8rem;">
+        <div class="quien"><b id="quien-nombre"></b><span id="quien-rol"></span></div>
+        <a id="btn-manual" href="manual.html" title="Manual: cómo funciona el panel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M20 18v3H6.5a2.5 2.5 0 0 1 0-5"/><path d="M9 7.5h7M9 11h5"/></svg>
+          <span>Manual</span>
+        </a>
+        <button id="btn-salir" type="button">Salir</button>
+      </div>
+    </header>
+
+    <nav aria-label="Secciones">
+      <button data-vista="tablero" class="activa" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3a9 9 0 0 0-9 9h4a5 5 0 0 1 10 0h4a9 9 0 0 0-9-9z"/><path d="M12 12l3-3"/></svg>
+        Tablero
+      </button>
+      <button data-vista="clientes" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.4 3.4-5 6.5-5s5.7 1.6 6.5 5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 15.2c2.4.3 4.3 1.6 5 4.3"/></svg>
+        Clientes
+      </button>
+      <button data-vista="vehiculos" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 13l2-5a2 2 0 0 1 1.9-1.3h10.2A2 2 0 0 1 19 8l2 5"/><path d="M3 13h18v4a1 1 0 0 1-1 1h-1"/><path d="M5 18H4a1 1 0 0 1-1-1v-4"/><circle cx="7.5" cy="18" r="1.8"/><circle cx="16.5" cy="18" r="1.8"/></svg>
+        Vehículos
+      </button>
+      <button data-vista="citas" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4M9 14l2 2 4-4"/></svg>
+        Citas
+      </button>
+      <button data-vista="reglas" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14.7 6.3a4.5 4.5 0 0 0-6 6L3 18l3 3 5.7-5.7a4.5 4.5 0 0 0 6-6L14 13l-3-3 3.7-3.7z"/></svg>
+        Reglas
+      </button>
+      <button data-vista="equipo" type="button" class="solo-admin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="7" r="3.5"/><path d="M5 20c.9-3.6 3.7-5.5 7-5.5s6.1 1.9 7 5.5"/></svg>
+        Equipo
+      </button>
+    </nav>
+
+    <main>
+      <!-- ===== TABLERO ===== -->
+      <section id="vista-tablero" class="vista">
+        <div class="titulo-vista">
+          <div>
+            <h2>¿A quién llamar hoy?</h2>
+            <p>Vehículos con mantenimientos vencidos o próximos.</p>
+          </div>
+          <button class="btn" id="btn-enviar-recordatorios" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 8l9 6 9-6"/><rect x="3" y="5" width="18" height="14" rx="2"/></svg>
+            Enviar recordatorios
+          </button>
+        </div>
+        <div class="indicadores" id="indicadores"></div>
+        <div id="tablero-lista"></div>
+      </section>
+
+      <!-- ===== CLIENTES ===== -->
+      <section id="vista-clientes" class="vista" hidden>
+        <div class="titulo-vista">
+          <div>
+            <h2>Clientes</h2>
+            <p>Dueños de los vehículos. Cada uno tiene su enlace secreto del portal.</p>
+          </div>
+          <button class="btn" id="btn-nuevo-cliente" type="button">+ Nuevo cliente</button>
+        </div>
+        <div class="tarjeta" id="clientes-lista"></div>
+      </section>
+
+      <!-- ===== VEHÍCULOS ===== -->
+      <section id="vista-vehiculos" class="vista" hidden>
+        <div class="titulo-vista">
+          <div>
+            <h2>Vehículos</h2>
+            <p>El kilometraje se actualiza registrando un ingreso, nunca a mano.</p>
+          </div>
+          <button class="btn" id="btn-nuevo-vehiculo" type="button">+ Nuevo vehículo</button>
+        </div>
+        <div id="vehiculos-lista"></div>
+      </section>
+
+      <!-- ===== CITAS (solicitadas por los clientes desde su portal) ===== -->
+      <section id="vista-citas" class="vista" hidden>
+        <div class="titulo-vista">
+          <div>
+            <h2>Citas</h2>
+            <p>Los clientes las piden desde su portal. Confírmalas y llámalos si hace falta.</p>
+          </div>
+        </div>
+        <div class="tarjeta" id="citas-lista"></div>
+      </section>
+
+      <!-- ===== REGLAS (tipos de mantenimiento) ===== -->
+      <section id="vista-reglas" class="vista" hidden>
+        <div class="titulo-vista">
+          <div>
+            <h2>Reglas de mantenimiento</h2>
+            <p>Cada cuántos km o meses toca cada cosa. Manda el manual del fabricante.</p>
+          </div>
+          <button class="btn solo-admin" id="btn-nueva-regla" type="button">+ Nueva regla</button>
+        </div>
+        <div class="tarjeta" id="reglas-lista"></div>
+      </section>
+
+      <!-- ===== EQUIPO (solo admin) ===== -->
+      <section id="vista-equipo" class="vista" hidden>
+        <div class="titulo-vista">
+          <div>
+            <h2>Equipo del taller</h2>
+            <p>El admin configura; el mecánico registra ingresos, clientes y vehículos.</p>
+          </div>
+          <button class="btn" id="btn-nuevo-usuario" type="button">+ Nuevo usuario</button>
+        </div>
+        <div class="tarjeta" id="equipo-lista"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ============ VENTANAS DE FORMULARIO ============ -->
+  <dialog id="dialogo-cliente">
+    <h3 id="titulo-cliente">Nuevo cliente</h3>
+    <form id="form-cliente" method="dialog">
+      <div class="campo">
+        <label for="cliente-nombre">Nombre *</label>
+        <input id="cliente-nombre" required>
+      </div>
+      <div class="campo">
+        <label for="cliente-telefono">Teléfono</label>
+        <input id="cliente-telefono" type="tel" placeholder="300 123 4567">
+      </div>
+      <div class="campo">
+        <label for="cliente-email">Correo</label>
+        <input id="cliente-email" type="email">
+        <p class="ayuda">Necesario para que le lleguen los recordatorios por correo.</p>
+      </div>
+      <div class="campo" id="campo-consentimiento">
+        <label style="display:flex;align-items:flex-start;gap:.5rem;cursor:pointer;color:var(--tinta);font-size:.8rem;">
+          <input type="checkbox" id="cliente-consentimiento"
+                 style="width:1.1rem;height:1.1rem;accent-color:var(--accion);flex-shrink:0;margin-top:.1rem;">
+          <span>El cliente autorizó el tratamiento de sus datos personales
+          (Ley 1581/2012). <a href="/app/privacidad.html" target="_blank">Ver política</a>.</span>
+        </label>
+      </div>
+      <p class="error-form" role="alert"></p>
+      <div class="pie-dialogo">
+        <button class="btn secundario" type="button" data-cerrar>Cancelar</button>
+        <button class="btn" type="submit">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dialogo-vehiculo">
+    <h3 id="titulo-vehiculo">Nuevo vehículo</h3>
+    <form id="form-vehiculo" method="dialog">
+      <div class="campo">
+        <label for="vehiculo-cliente">Dueño (cliente) *</label>
+        <select id="vehiculo-cliente" required></select>
+      </div>
+      <div class="campo">
+        <label for="vehiculo-placa">Placa *</label>
+        <input id="vehiculo-placa" required placeholder="ABC123" style="text-transform:uppercase">
+      </div>
+      <div class="campos-2">
+        <div class="campo">
+          <label for="vehiculo-marca">Marca</label>
+          <input id="vehiculo-marca" placeholder="Toyota">
+        </div>
+        <div class="campo">
+          <label for="vehiculo-modelo">Modelo</label>
+          <input id="vehiculo-modelo" placeholder="Hilux">
+        </div>
+      </div>
+      <div class="campos-2">
+        <div class="campo">
+          <label for="vehiculo-anio">Año</label>
+          <input id="vehiculo-anio" type="number" min="1950" max="2100">
+        </div>
+        <div class="campo" id="campo-km-inicial">
+          <label for="vehiculo-km">Km actual *</label>
+          <input id="vehiculo-km" type="number" min="0">
+          <p class="ayuda">Solo al crear. Después se actualiza con cada ingreso.</p>
+        </div>
+      </div>
+      <p class="error-form" role="alert"></p>
+      <div class="pie-dialogo">
+        <button class="btn secundario" type="button" data-cerrar>Cancelar</button>
+        <button class="btn" type="submit">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dialogo-ingreso">
+    <h3>Registrar ingreso — <span class="mono" id="ingreso-placa"></span></h3>
+    <form id="form-ingreso" method="dialog">
+      <div class="campo">
+        <label for="ingreso-km">Kilometraje de hoy *</label>
+        <input id="ingreso-km" type="number" min="0" required>
+        <p class="ayuda" id="ingreso-km-ayuda"></p>
+      </div>
+      <div class="campo">
+        <label>¿Qué mantenimientos se hicieron?</label>
+        <div class="lista-chequeo" id="ingreso-tipos"></div>
+      </div>
+      <div class="campo">
+        <label for="ingreso-descripcion">Notas del mecánico</label>
+        <textarea id="ingreso-descripcion" placeholder="Ej: se cambió aceite 15W40, filtro marca X..."></textarea>
+      </div>
+      <p class="error-form" role="alert"></p>
+      <div class="pie-dialogo">
+        <button class="btn secundario" type="button" data-cerrar>Cancelar</button>
+        <button class="btn" type="submit">Registrar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dialogo-regla">
+    <h3 id="titulo-regla">Nueva regla</h3>
+    <form id="form-regla" method="dialog">
+      <div class="campo">
+        <label for="regla-nombre">Nombre *</label>
+        <input id="regla-nombre" required placeholder="Ej: Correa de repartición">
+      </div>
+      <div class="campos-2">
+        <div class="campo">
+          <label for="regla-km">Cada cuántos km</label>
+          <input id="regla-km" type="number" min="1" placeholder="10000">
+        </div>
+        <div class="campo">
+          <label for="regla-meses">Cada cuántos meses</label>
+          <input id="regla-meses" type="number" min="1" placeholder="6">
+        </div>
+      </div>
+      <p class="ayuda" style="font-size:.72rem;color:var(--tinta2)">Se avisa por lo que se cumpla primero. Llena al menos uno de los dos.</p>
+      <p class="error-form" role="alert"></p>
+      <div class="pie-dialogo">
+        <button class="btn secundario" type="button" data-cerrar>Cancelar</button>
+        <button class="btn" type="submit">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dialogo-usuario">
+    <h3>Nuevo usuario del taller</h3>
+    <form id="form-usuario" method="dialog">
+      <div class="campo">
+        <label for="usuario-nombre">Nombre *</label>
+        <input id="usuario-nombre" required>
+      </div>
+      <div class="campo">
+        <label for="usuario-email">Correo *</label>
+        <input id="usuario-email" type="email" required>
+      </div>
+      <div class="campo">
+        <label for="usuario-clave">Contraseña *</label>
+        <input id="usuario-clave" type="password" required minlength="6">
+        <p class="ayuda">Mínimo 6 caracteres. Compártela con la persona en privado.</p>
+      </div>
+      <div class="campo">
+        <label for="usuario-rol">Rol</label>
+        <select id="usuario-rol">
+          <option value="mecanico">Mecánico — registra ingresos, clientes y vehículos</option>
+          <option value="admin">Administrador — además configura reglas y equipo</option>
+        </select>
+      </div>
+      <p class="error-form" role="alert"></p>
+      <div class="pie-dialogo">
+        <button class="btn secundario" type="button" data-cerrar>Cancelar</button>
+        <button class="btn" type="submit">Crear</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dialogo-enlace">
+    <h3>Enlace del portal</h3>
+    <p style="font-size:.82rem;color:var(--tinta2);margin-bottom:.8rem;">
+      Compártelo <b style="color:var(--tinta)">solo con el cliente</b>: quien tenga
+      este enlace ve sus vehículos y su historial.
+    </p>
+    <div class="campo">
+      <label for="enlace-url">Enlace de <span id="enlace-cliente"></span></label>
+      <input id="enlace-url" readonly class="mono" style="font-size:.75rem;">
+    </div>
+    <div class="pie-dialogo" style="justify-content:space-between;">
+      <button class="btn peligro chico solo-admin" type="button" id="btn-regenerar">Regenerar (anula el actual)</button>
+      <div style="display:flex;gap:.5rem;">
+        <button class="btn secundario" type="button" data-cerrar>Cerrar</button>
+        <button class="btn" type="button" id="btn-copiar-enlace">Copiar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    "use strict";
+    /* =====================================================
+       LÓGICA DEL PANEL. Todo habla con la API de FastAPI
+       usando fetch(). El token JWT se guarda en localStorage
+       y viaja en el encabezado Authorization de cada petición.
+       ===================================================== */
+
+    // ---------- estado de la sesión ----------
+    const sesion = {
+      get token()     { return localStorage.getItem("panel_token"); },
+      get tallerId()  { return Number(localStorage.getItem("panel_taller")); },
+      get nombre()    { return localStorage.getItem("panel_nombre"); },
+      get rol()       { return localStorage.getItem("panel_rol"); },
+      get tallerNombre() { return localStorage.getItem("panel_taller_nombre"); },
+      guardar(datos) {
+        localStorage.setItem("panel_token", datos.access_token);
+        localStorage.setItem("panel_taller", datos.taller_id);
+        localStorage.setItem("panel_nombre", datos.nombre);
+        localStorage.setItem("panel_rol", datos.rol);
+        localStorage.setItem("panel_taller_nombre", datos.taller || "");
+      },
+      borrar() {
+        ["panel_token", "panel_taller", "panel_nombre", "panel_rol", "panel_taller_nombre"]
+          .forEach(k => localStorage.removeItem(k));
+      },
+    };
+
+    // cache simple para no repetir peticiones dentro de una misma vista
+    const cache = { clientes: [], tipos: [] };
+
+    const $ = sel => document.querySelector(sel);
+
+    // ---------- ayudante de API ----------
+    async function api(ruta, opciones = {}) {
+      opciones.headers = Object.assign(
+        { "Authorization": "Bearer " + sesion.token },
+        opciones.body ? { "Content-Type": "application/json" } : {},
+        opciones.headers || {},
+      );
+      const respuesta = await fetch(ruta, opciones);
+      if (respuesta.status === 401) {       // token vencido -> volver al login
+        cerrarSesion("Tu sesión venció. Entra de nuevo.");
+        throw new Error("Sesión vencida");
+      }
+      const datos = await respuesta.json().catch(() => ({}));
+      if (!respuesta.ok) {
+        // FastAPI manda el motivo en "detail" (a veces es una lista de validación)
+        const detalle = typeof datos.detail === "string"
+          ? datos.detail
+          : "Revisa los datos enviados";
+        throw new Error(detalle);
+      }
+      return datos;
+    }
+
+    // ---------- toast (aviso flotante) ----------
+    let toastTimer = null;
+    function avisar(mensaje, esError = false) {
+      const t = $("#toast");
+      t.textContent = mensaje;
+      t.classList.toggle("error", esError);
+      t.classList.add("visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove("visible"), 3500);
+    }
+
+    function escapar(texto) {
+      // Evita que un nombre con <etiquetas> rompa (o ataque) la página.
+      const div = document.createElement("div");
+      div.textContent = texto == null ? "" : String(texto);
+      return div.innerHTML;
+    }
+
+    const fmtKm = n => Number(n).toLocaleString("es-CO");
+
+    // ---------- sesión: entrar y salir ----------
+    $("#form-login").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const boton = $("#btn-login");
+      boton.disabled = true;
+      $("#login-error").textContent = "";
+      try {
+        // /login usa el formato de formulario OAuth2 (username = correo)
+        const cuerpo = new URLSearchParams({
+          username: $("#login-email").value.trim(),
+          password: $("#login-clave").value,
+        });
+        const respuesta = await fetch("/login", { method: "POST", body: cuerpo });
+        const datos = await respuesta.json().catch(() => ({}));
+        if (!respuesta.ok) throw new Error(datos.detail || "No se pudo iniciar sesión");
+        sesion.guardar(datos);
+        entrar();
+      } catch (err) {
+        $("#login-error").textContent = err.message;
+      } finally {
+        boton.disabled = false;
+      }
+    });
+
+    function entrar() {
+      $("#vista-login").style.display = "none";
+      $("#app").classList.add("activa");
+      // el <body> lleva la clase es-admin: el CSS oculta lo .solo-admin al mecánico
+      document.body.classList.toggle("es-admin", sesion.rol === "admin");
+      $("#quien-nombre").textContent = sesion.nombre;
+      $("#quien-rol").textContent =
+        (sesion.rol === "admin" ? "Administrador" : "Mecánico") +
+        (sesion.tallerNombre ? " · " + sesion.tallerNombre : "");
+      mostrarVista("tablero");
+    }
+
+    // ---------- registro de taller nuevo ----------
+    $("#ir-registro").addEventListener("click", () => {
+      $("#form-login").hidden = true;
+      $("#form-registro").hidden = false;
+    });
+    $("#ir-login").addEventListener("click", () => {
+      $("#form-registro").hidden = true;
+      $("#form-login").hidden = false;
+    });
+
+    $("#form-registro").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const boton = $("#btn-registro");
+      boton.disabled = true;
+      $("#registro-error").textContent = "";
+      try {
+        const respuesta = await fetch("/registro", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            taller_nombre: $("#reg-taller-nombre").value.trim(),
+            taller_email: $("#reg-taller-email").value.trim(),
+            admin_nombre: $("#reg-nombre").value.trim(),
+            admin_email: $("#reg-email").value.trim(),
+            admin_clave: $("#reg-clave").value,
+          }),
+        });
+        const datos = await respuesta.json().catch(() => ({}));
+        if (!respuesta.ok) {
+          throw new Error(typeof datos.detail === "string"
+            ? datos.detail : "Revisa los datos del formulario");
+        }
+        sesion.guardar(datos);   // el registro ya devuelve el token: entra directo
+        entrar();
+        avisar("¡Taller creado! Ya cargamos las reglas diésel de arranque.");
+      } catch (err) {
+        $("#registro-error").textContent = err.message;
+      } finally {
+        boton.disabled = false;
+      }
+    });
+
+    function cerrarSesion(mensaje) {
+      sesion.borrar();
+      document.body.classList.remove("es-admin");
+      $("#app").classList.remove("activa");
+      $("#vista-login").style.display = "flex";
+      $("#form-registro").hidden = true;
+      $("#form-login").hidden = false;
+      $("#form-login").reset();
+      if (mensaje) $("#login-error").textContent = mensaje;
+    }
+    $("#btn-salir").addEventListener("click", () => cerrarSesion());
+
+    // ---------- navegación entre vistas ----------
+    const cargadores = {
+      tablero: cargarTablero,
+      clientes: cargarClientes,
+      vehiculos: cargarVehiculos,
+      reglas: cargarReglas,
+      equipo: cargarEquipo,
+      citas: cargarCitas,
+    };
+
+    function mostrarVista(nombre) {
+      document.querySelectorAll(".vista").forEach(v => v.hidden = true);
+      $("#vista-" + nombre).hidden = false;
+      document.querySelectorAll("nav button").forEach(b =>
+        b.classList.toggle("activa", b.dataset.vista === nombre));
+      cargadores[nombre]().catch(err => avisar(err.message, true));
+    }
+    document.querySelectorAll("nav button").forEach(b =>
+      b.addEventListener("click", () => mostrarVista(b.dataset.vista)));
+
+    // cerrar cualquier diálogo con su botón "Cancelar/Cerrar"
+    document.querySelectorAll("[data-cerrar]").forEach(b =>
+      b.addEventListener("click", () => b.closest("dialog").close()));
+
+    // ============================================================
+    //  TABLERO
+    // ============================================================
+    async function cargarTablero() {
+      const datos = await api(`/talleres/${sesion.tallerId}/recordatorios`);
+      const vencidos = datos.tablero.reduce((suma, v) =>
+        suma + v.pendientes.filter(p => p.estado === "vencido").length, 0);
+
+      $("#indicadores").innerHTML = `
+        <div class="indicador"><div class="numero">${datos.total_vehiculos}</div><div class="texto">Vehículos</div></div>
+        <div class="indicador"><div class="numero ${datos.con_pendientes ? "rojo" : "verde"}">${datos.con_pendientes}</div><div class="texto">Con pendientes</div></div>
+        <div class="indicador"><div class="numero ${vencidos ? "rojo" : "verde"}">${vencidos}</div><div class="texto">Vencidos</div></div>`;
+
+      if (!datos.tablero.length) {
+        $("#tablero-lista").innerHTML =
+          `<div class="tarjeta"><p class="vacio">Todo al día. Ningún vehículo necesita mantenimiento por ahora. ✔</p></div>`;
+        return;
+      }
+
+      $("#tablero-lista").innerHTML = datos.tablero.map(v => `
+        <div class="tarjeta">
+          <div class="fila" style="border:none;padding:0;">
+            <div class="datos">
+              <span class="placa">${escapar(v.placa)}</span>
+              <span style="margin-left:.5rem;">${escapar(v.cliente || "Sin dueño")}
+                ${v.telefono ? `· <a href="tel:${escapar(v.telefono)}">${escapar(v.telefono)}</a>` : ""}
+              </span>
+            </div>
+            <button class="btn secundario chico" type="button" data-ingreso-vid="${v.vehiculo_id}" data-placa="${escapar(v.placa)}">+ Ingreso</button>
+          </div>
+          <div class="pendientes-lista">
+            ${v.pendientes.map(p => `
+              <span class="chip ${p.estado}">
+                ${p.estado === "vencido" ? "Vencido" : "Próximo"}: ${escapar(p.tipo)}
+                ${p.km_faltantes != null && p.km_faltantes <= 0 ? `(${fmtKm(-p.km_faltantes)} km pasado)` : ""}
+              </span>`).join("")}
+          </div>
+        </div>`).join("");
+
+      conectarBotonesIngreso($("#tablero-lista"));
+    }
+
+    // botón "Enviar recordatorios": dispara los correos/push pendientes
+    $("#btn-enviar-recordatorios").addEventListener("click", async (e) => {
+      const boton = e.currentTarget;
+      boton.disabled = true;
+      try {
+        const r = await api(`/talleres/${sesion.tallerId}/enviar-recordatorios`, { method: "POST" });
+        avisar(`Listo: ${r.correos ?? 0} correo(s), ${r.push ?? 0} push, ` +
+               `${r.whatsapp ?? 0} WhatsApp, ` +
+               `${r.omitidos_ya_avisados ?? 0} omitido(s) por aviso reciente, ` +
+               `${r.omitidos_sin_contacto ?? 0} sin datos de contacto.`);
+      } catch (err) {
+        avisar(err.message, true);
+      } finally {
+        boton.disabled = false;
+      }
+    });
+
+    // ============================================================
+    //  CLIENTES
+    // ============================================================
+    async function cargarClientes() {
+      cache.clientes = await api(`/talleres/${sesion.tallerId}/clientes`);
+      if (!cache.clientes.length) {
+        $("#clientes-lista").innerHTML = `<p class="vacio">Aún no hay clientes. Crea el primero.</p>`;
+        return;
+      }
+      $("#clientes-lista").innerHTML = cache.clientes.map(c => {
+        const suprimido = c.nombre === "(datos suprimidos)";
+        return `
+        <div class="fila">
+          <div class="datos">
+            <b>${escapar(c.nombre)}</b>
+            <span>${suprimido ? "supresión solicitada por el cliente (Habeas Data)"
+              : escapar(c.telefono || "sin teléfono") + " · " + escapar(c.email || "sin correo")}</span>
+          </div>
+          <div class="acciones">${suprimido ? "" : `
+            <button class="btn secundario chico" type="button" data-editar-cid="${c.id}">Editar</button>
+            <button class="btn secundario chico" type="button" data-enlace-cid="${c.id}">Enlace portal</button>
+            <button class="btn peligro chico solo-admin" type="button" data-suprimir-cid="${c.id}">Suprimir datos</button>`}
+          </div>
+        </div>`;
+      }).join("");
+
+      $("#clientes-lista").querySelectorAll("[data-editar-cid]").forEach(b =>
+        b.addEventListener("click", () => abrirFormCliente(Number(b.dataset.editarCid))));
+      $("#clientes-lista").querySelectorAll("[data-enlace-cid]").forEach(b =>
+        b.addEventListener("click", () => abrirEnlace(Number(b.dataset.enlaceCid))));
+      $("#clientes-lista").querySelectorAll("[data-suprimir-cid]").forEach(b =>
+        b.addEventListener("click", async () => {
+          const c = cache.clientes.find(x => x.id === Number(b.dataset.suprimirCid));
+          if (!confirm(`Habeas Data: se borrarán nombre, teléfono, correo y el enlace del portal de "${c.nombre}". `
+                     + `El historial del vehículo se conserva anónimo. Esto NO se puede deshacer. ¿Continuar?`)) return;
+          try {
+            await api(`/talleres/${sesion.tallerId}/clientes/${c.id}/datos-personales`, { method: "DELETE" });
+            avisar("Datos personales suprimidos");
+            cargarClientes();
+          } catch (err) { avisar(err.message, true); }
+        }));
+    }
+
+    let clienteEditando = null;   // null = creando; número = editando ese id
+
+    function abrirFormCliente(clienteId = null) {
+      clienteEditando = clienteId;
+      const c = cache.clientes.find(x => x.id === clienteId);
+      $("#titulo-cliente").textContent = c ? "Editar cliente" : "Nuevo cliente";
+      $("#cliente-nombre").value = c ? c.nombre : "";
+      $("#cliente-telefono").value = c ? (c.telefono || "") : "";
+      $("#cliente-email").value = c ? (c.email || "") : "";
+      // el consentimiento solo se pide al CREAR (al editar ya quedó registrado)
+      $("#campo-consentimiento").style.display = c ? "none" : "";
+      $("#cliente-consentimiento").checked = false;
+      $("#form-cliente .error-form").textContent = "";
+      $("#dialogo-cliente").showModal();
+    }
+    $("#btn-nuevo-cliente").addEventListener("click", () => abrirFormCliente());
+
+    $("#form-cliente").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const cuerpo = {
+        nombre: $("#cliente-nombre").value.trim(),
+        telefono: $("#cliente-telefono").value.trim() || null,
+        email: $("#cliente-email").value.trim() || null,
+      };
+      if (!clienteEditando) {
+        if (!$("#cliente-consentimiento").checked) {
+          $("#form-cliente .error-form").textContent =
+            "Confirma que el cliente autorizó el tratamiento de sus datos.";
+          return;
+        }
+        cuerpo.consentimiento = true;
+      }
+      try {
+        if (clienteEditando) {
+          await api(`/talleres/${sesion.tallerId}/clientes/${clienteEditando}`,
+                    { method: "PATCH", body: JSON.stringify(cuerpo) });
+        } else {
+          await api(`/talleres/${sesion.tallerId}/clientes`,
+                    { method: "POST", body: JSON.stringify(cuerpo) });
+        }
+        $("#dialogo-cliente").close();
+        avisar("Cliente guardado");
+        cargarClientes();
+      } catch (err) {
+        $("#form-cliente .error-form").textContent = err.message;
+      }
+    });
+
+    // --- enlace del portal + regenerar token ---
+    let clienteEnlace = null;
+
+    async function abrirEnlace(clienteId) {
+      clienteEnlace = clienteId;
+      try {
+        const datos = await api(`/talleres/${sesion.tallerId}/clientes/${clienteId}/enlace-portal`);
+        $("#enlace-cliente").textContent = datos.cliente;
+        $("#enlace-url").value = location.origin + datos.ruta;
+        $("#dialogo-enlace").showModal();
+      } catch (err) { avisar(err.message, true); }
+    }
+
+    $("#btn-copiar-enlace").addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText($("#enlace-url").value);
+        avisar("Enlace copiado. Pégalo en WhatsApp o correo del cliente.");
+      } catch {
+        $("#enlace-url").select();   // plan B: dejarlo seleccionado para copiar a mano
+        avisar("Copia manual: el enlace quedó seleccionado.", true);
+      }
+    });
+
+    $("#btn-regenerar").addEventListener("click", async () => {
+      if (!confirm("El enlace actual dejará de funcionar y el cliente necesitará el nuevo. ¿Continuar?")) return;
+      try {
+        const datos = await api(
+          `/talleres/${sesion.tallerId}/clientes/${clienteEnlace}/regenerar-token`,
+          { method: "POST" });
+        $("#enlace-url").value = location.origin + datos.ruta;
+        avisar("Enlace regenerado. El anterior quedó anulado.");
+      } catch (err) { avisar(err.message, true); }
+    });
+
+    // ============================================================
+    //  VEHÍCULOS
+    // ============================================================
+    async function cargarVehiculos() {
+      // pedimos vehículos y clientes a la vez (los nombres de dueño salen del cache)
+      const [vehiculos, clientes] = await Promise.all([
+        api(`/talleres/${sesion.tallerId}/vehiculos`),
+        api(`/talleres/${sesion.tallerId}/clientes`),
+      ]);
+      cache.clientes = clientes;
+      cache.vehiculos = vehiculos;
+
+      if (!vehiculos.length) {
+        $("#vehiculos-lista").innerHTML =
+          `<div class="tarjeta"><p class="vacio">Aún no hay vehículos registrados.</p></div>`;
+        return;
+      }
+
+      // mapa id->nombre para mostrar el dueño de cada vehículo
+      const nombreCliente = Object.fromEntries(clientes.map(c => [c.id, c.nombre]));
+
+      $("#vehiculos-lista").innerHTML = vehiculos.map(v => `
+        <div class="tarjeta" data-vid="${v.id}">
+          <div class="fila" style="border:none;padding:0;">
+            <div class="datos">
+              <span class="placa">${escapar(v.placa)}</span>
+              <span style="margin-left:.5rem;">${escapar([v.marca, v.modelo, v.anio].filter(Boolean).join(" ") || "sin datos")}</span>
+              <span style="margin-left:.5rem;color:var(--tinta2);font-size:.8rem;">
+                · dueño: <b style="color:var(--tinta);">${escapar(nombreCliente[v.cliente_id] || "?")}</b></span>
+              <span style="display:block;margin-top:.3rem;">
+                <span class="mono" style="color:var(--lcd);">${fmtKm(v.km_actual)} km</span>
+                <span style="color:var(--tinta2);font-size:.75rem;"> registrados el ${new Date(v.fecha_km).toLocaleDateString("es-CO")}</span>
+              </span>
+            </div>
+            <div class="acciones">
+              <button class="btn chico" type="button" data-ingreso-vid="${v.id}" data-placa="${escapar(v.placa)}">+ Ingreso</button>
+              <button class="btn secundario chico" type="button" data-editar-vid="${v.id}">Editar</button>
+            </div>
+          </div>
+          <details class="historial" data-historial-vid="${v.id}">
+            <summary>Estado e historial</summary>
+            <div class="contenido-historial bitacora">Cargando...</div>
+          </details>
+        </div>`).join("");
+
+      const zona = $("#vehiculos-lista");
+      conectarBotonesIngreso(zona);
+      zona.querySelectorAll("[data-editar-vid]").forEach(b =>
+        b.addEventListener("click", () => abrirFormVehiculo(Number(b.dataset.editarVid))));
+      // el historial se pide SOLO al abrir el desplegable (no antes: ahorra datos)
+      zona.querySelectorAll("[data-historial-vid]").forEach(d =>
+        d.addEventListener("toggle", () => {
+          if (d.open && !d.dataset.cargado) {
+            d.dataset.cargado = "1";
+            cargarHistorial(Number(d.dataset.historialVid), d.querySelector(".contenido-historial"));
+          }
+        }));
+    }
+
+    async function cargarHistorial(vehiculoId, contenedor) {
+      try {
+        const [recordatorios, ingresos] = await Promise.all([
+          api(`/vehiculos/${vehiculoId}/recordatorios`),
+          api(`/vehiculos/${vehiculoId}/ingresos`),
+        ]);
+        const estados = recordatorios.mantenimientos.map(m => {
+          const palabra = m.estado === "vencido" ? "Vencido"
+                        : m.estado === "proximo" ? "Próximo" : "Al día";
+          return `<span class="chip ${m.estado}">${palabra}: ${escapar(m.tipo)}</span>`;
+        }).join(" ");
+        const visitas = ingresos.length
+          ? ingresos.map(i =>
+              `<div><b>${new Date(i.fecha).toLocaleDateString("es-CO")}</b> · ${fmtKm(i.kilometraje)} km — ${escapar(i.descripcion || "sin notas")}</div>`
+            ).join("")
+          : "<div>Sin visitas registradas todavía.</div>";
+        contenedor.innerHTML =
+          `<div class="pendientes-lista" style="margin:0 0 .6rem;">${estados}</div>${visitas}`;
+      } catch (err) {
+        contenedor.textContent = "No se pudo cargar: " + err.message;
+      }
+    }
+
+    let vehiculoEditando = null;
+
+    function abrirFormVehiculo(vehiculoId = null) {
+      vehiculoEditando = vehiculoId;
+      const v = (cache.vehiculos || []).find(x => x.id === vehiculoId);
+      $("#titulo-vehiculo").textContent = v ? "Editar vehículo" : "Nuevo vehículo";
+      // dueños posibles = clientes del taller
+      $("#vehiculo-cliente").innerHTML = cache.clientes.map(c =>
+        `<option value="${c.id}">${escapar(c.nombre)}</option>`).join("");
+      if (v) {
+        // pre-marcamos al dueño ACTUAL: si no, se reasignaba al primero de la lista
+        $("#vehiculo-cliente").value = v.cliente_id;
+        $("#vehiculo-placa").value = v.placa;
+        $("#vehiculo-marca").value = v.marca || "";
+        $("#vehiculo-modelo").value = v.modelo || "";
+        $("#vehiculo-anio").value = v.anio || "";
+      } else {
+        $("#form-vehiculo").reset();
+      }
+      // el km inicial solo aplica al CREAR (después manda el ingreso)
+      $("#campo-km-inicial").style.display = v ? "none" : "";
+      $("#vehiculo-km").required = !v;
+      $("#form-vehiculo .error-form").textContent = "";
+      $("#dialogo-vehiculo").showModal();
+    }
+    $("#btn-nuevo-vehiculo").addEventListener("click", async () => {
+      if (!cache.clientes.length) cache.clientes = await api(`/talleres/${sesion.tallerId}/clientes`);
+      if (!cache.clientes.length) { avisar("Primero crea un cliente (el dueño del vehículo).", true); return; }
+      abrirFormVehiculo();
+    });
+
+    $("#form-vehiculo").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const cuerpo = {
+        cliente_id: Number($("#vehiculo-cliente").value),
+        placa: $("#vehiculo-placa").value.trim().toUpperCase(),
+        marca: $("#vehiculo-marca").value.trim() || null,
+        modelo: $("#vehiculo-modelo").value.trim() || null,
+        anio: $("#vehiculo-anio").value ? Number($("#vehiculo-anio").value) : null,
+      };
+      try {
+        if (vehiculoEditando) {
+          await api(`/talleres/${sesion.tallerId}/vehiculos/${vehiculoEditando}`,
+                    { method: "PATCH", body: JSON.stringify(cuerpo) });
+        } else {
+          cuerpo.km_actual = Number($("#vehiculo-km").value || 0);
+          await api(`/talleres/${sesion.tallerId}/vehiculos`,
+                    { method: "POST", body: JSON.stringify(cuerpo) });
+        }
+        $("#dialogo-vehiculo").close();
+        avisar("Vehículo guardado");
+        cargarVehiculos();
+      } catch (err) {
+        $("#form-vehiculo .error-form").textContent = err.message;
+      }
+    });
+
+    // ============================================================
+    //  INGRESOS (registrar una visita)
+    // ============================================================
+    let ingresoVehiculoId = null;
+
+    function conectarBotonesIngreso(zona) {
+      zona.querySelectorAll("[data-ingreso-vid]").forEach(b =>
+        b.addEventListener("click", () =>
+          abrirFormIngreso(Number(b.dataset.ingresoVid), b.dataset.placa)));
+    }
+
+    async function abrirFormIngreso(vehiculoId, placa) {
+      ingresoVehiculoId = vehiculoId;
+      $("#ingreso-placa").textContent = placa;
+      $("#form-ingreso").reset();
+      $("#form-ingreso .error-form").textContent = "";
+      // km actual como referencia para no digitar menos por error
+      const v = (cache.vehiculos || []).find(x => x.id === vehiculoId);
+      $("#ingreso-km-ayuda").textContent = v
+        ? `Último registrado: ${fmtKm(v.km_actual)} km` : "";
+      // checkboxes con las reglas del taller
+      if (!cache.tipos.length) cache.tipos = await api(`/talleres/${sesion.tallerId}/tipos-mantenimiento`);
+      $("#ingreso-tipos").innerHTML = cache.tipos.map(t =>
+        `<label><input type="checkbox" value="${t.id}"> ${escapar(t.nombre)}</label>`).join("");
+      $("#dialogo-ingreso").showModal();
+    }
+
+    $("#form-ingreso").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const marcados = [...$("#ingreso-tipos").querySelectorAll("input:checked")]
+        .map(c => Number(c.value));
+      try {
+        await api("/ingresos", {
+          method: "POST",
+          body: JSON.stringify({
+            vehiculo_id: ingresoVehiculoId,
+            kilometraje: Number($("#ingreso-km").value),
+            descripcion: $("#ingreso-descripcion").value.trim() || null,
+            tipos_realizados: marcados,
+          }),
+        });
+        $("#dialogo-ingreso").close();
+        avisar("Ingreso registrado y kilometraje actualizado");
+        // refresca la vista visible (tablero o vehículos)
+        if (!$("#vista-tablero").hidden) cargarTablero();
+        if (!$("#vista-vehiculos").hidden) cargarVehiculos();
+      } catch (err) {
+        $("#form-ingreso .error-form").textContent = err.message;
+      }
+    });
+
+    // ============================================================
+    //  REGLAS (tipos de mantenimiento)
+    // ============================================================
+    async function cargarReglas() {
+      cache.tipos = await api(`/talleres/${sesion.tallerId}/tipos-mantenimiento`);
+      if (!cache.tipos.length) {
+        $("#reglas-lista").innerHTML = `<p class="vacio">Sin reglas. Crea la primera.</p>`;
+        return;
+      }
+      $("#reglas-lista").innerHTML = cache.tipos.map(t => `
+        <div class="fila">
+          <div class="datos">
+            <b>${escapar(t.nombre)}</b>
+            <span class="mono">
+              ${t.intervalo_km ? `cada ${fmtKm(t.intervalo_km)} km` : ""}
+              ${t.intervalo_km && t.intervalo_meses ? " · " : ""}
+              ${t.intervalo_meses ? `cada ${t.intervalo_meses} meses` : ""}
+            </span>
+          </div>
+          <div class="acciones">
+            <button class="btn secundario chico solo-admin" type="button" data-editar-tid="${t.id}">Editar</button>
+            <button class="btn peligro chico solo-admin" type="button" data-borrar-tid="${t.id}">Eliminar</button>
+          </div>
+        </div>`).join("");
+
+      $("#reglas-lista").querySelectorAll("[data-editar-tid]").forEach(b =>
+        b.addEventListener("click", () => abrirFormRegla(Number(b.dataset.editarTid))));
+      $("#reglas-lista").querySelectorAll("[data-borrar-tid]").forEach(b =>
+        b.addEventListener("click", async () => {
+          const tipo = cache.tipos.find(t => t.id === Number(b.dataset.borrarTid));
+          if (!confirm(`¿Eliminar la regla "${tipo.nombre}"?`)) return;
+          try {
+            await api(`/talleres/${sesion.tallerId}/tipos-mantenimiento/${tipo.id}`, { method: "DELETE" });
+            avisar("Regla eliminada");
+            cargarReglas();
+          } catch (err) { avisar(err.message, true); }
+        }));
+    }
+
+    let reglaEditando = null;
+
+    function abrirFormRegla(tipoId = null) {
+      reglaEditando = tipoId;
+      const t = cache.tipos.find(x => x.id === tipoId);
+      $("#titulo-regla").textContent = t ? "Editar regla" : "Nueva regla";
+      $("#regla-nombre").value = t ? t.nombre : "";
+      $("#regla-km").value = t && t.intervalo_km ? t.intervalo_km : "";
+      $("#regla-meses").value = t && t.intervalo_meses ? t.intervalo_meses : "";
+      $("#form-regla .error-form").textContent = "";
+      $("#dialogo-regla").showModal();
+    }
+    $("#btn-nueva-regla").addEventListener("click", () => abrirFormRegla());
+
+    $("#form-regla").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const cuerpo = {
+        nombre: $("#regla-nombre").value.trim(),
+        intervalo_km: $("#regla-km").value ? Number($("#regla-km").value) : null,
+        intervalo_meses: $("#regla-meses").value ? Number($("#regla-meses").value) : null,
+      };
+      if (cuerpo.intervalo_km == null && cuerpo.intervalo_meses == null) {
+        $("#form-regla .error-form").textContent = "Llena al menos un intervalo (km o meses).";
+        return;
+      }
+      try {
+        if (reglaEditando) {
+          await api(`/talleres/${sesion.tallerId}/tipos-mantenimiento/${reglaEditando}`,
+                    { method: "PATCH", body: JSON.stringify(cuerpo) });
+        } else {
+          await api(`/talleres/${sesion.tallerId}/tipos-mantenimiento`,
+                    { method: "POST", body: JSON.stringify(cuerpo) });
+        }
+        $("#dialogo-regla").close();
+        avisar("Regla guardada");
+        cargarReglas();
+      } catch (err) {
+        $("#form-regla .error-form").textContent = err.message;
+      }
+    });
+
+    // ============================================================
+    //  CITAS: solicitudes de los clientes desde su portal
+    // ============================================================
+    const CHIP_CITA = { solicitada: "proximo", confirmada: "al_dia",
+                        atendida: "al_dia", cancelada: "vencido" };
+
+    async function cargarCitas() {
+      const citas = await api(`/talleres/${sesion.tallerId}/citas`);
+      if (!citas.length) {
+        $("#citas-lista").innerHTML =
+          `<p class="vacio">Sin citas todavía. Aparecerán cuando un cliente pida una desde su portal.</p>`;
+        return;
+      }
+      $("#citas-lista").innerHTML = citas.map(c => `
+        <div class="fila">
+          <div class="datos">
+            <b><span class="mono">${escapar(c.fecha)}</span> — ${escapar(c.placa)}</b>
+            <span>${escapar(c.cliente)}
+              ${c.telefono ? `· <a href="tel:${escapar(c.telefono)}">${escapar(c.telefono)}</a>` : ""}
+              ${c.nota ? `· "${escapar(c.nota)}"` : ""}</span>
+          </div>
+          <div class="acciones">
+            <span class="chip ${CHIP_CITA[c.estado] || "proximo"}">${escapar(c.estado)}</span>
+            ${c.estado === "solicitada" ? `
+              <button class="btn chico" type="button" data-cita="${c.id}" data-estado="confirmada">Confirmar</button>` : ""}
+            ${c.estado === "confirmada" ? `
+              <button class="btn chico" type="button" data-cita="${c.id}" data-estado="atendida">Atendida</button>` : ""}
+            ${["solicitada", "confirmada"].includes(c.estado) ? `
+              <button class="btn peligro chico" type="button" data-cita="${c.id}" data-estado="cancelada">Cancelar</button>` : ""}
+          </div>
+        </div>`).join("");
+
+      $("#citas-lista").querySelectorAll("[data-cita]").forEach(b =>
+        b.addEventListener("click", async () => {
+          try {
+            await api(`/talleres/${sesion.tallerId}/citas/${b.dataset.cita}`,
+                      { method: "PATCH", body: JSON.stringify({ estado: b.dataset.estado }) });
+            avisar(`Cita ${b.dataset.estado}`);
+            cargarCitas();
+          } catch (err) { avisar(err.message, true); }
+        }));
+    }
+
+    // ============================================================
+    //  EQUIPO (solo admin): el personal que puede entrar al panel
+    // ============================================================
+    async function cargarEquipo() {
+      const usuarios = await api(`/talleres/${sesion.tallerId}/usuarios`);
+      $("#equipo-lista").innerHTML = usuarios.map(u => `
+        <div class="fila">
+          <div class="datos">
+            <b>${escapar(u.nombre)}</b>
+            <span>${escapar(u.email)}</span>
+          </div>
+          <span class="chip ${u.rol === "admin" ? "proximo" : "al_dia"}">
+            ${u.rol === "admin" ? "Administrador" : "Mecánico"}
+          </span>
+        </div>`).join("");
+    }
+
+    $("#btn-nuevo-usuario").addEventListener("click", () => {
+      $("#form-usuario").reset();
+      $("#form-usuario .error-form").textContent = "";
+      $("#dialogo-usuario").showModal();
+    });
+
+    $("#form-usuario").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await api(`/talleres/${sesion.tallerId}/usuarios`, {
+          method: "POST",
+          body: JSON.stringify({
+            nombre: $("#usuario-nombre").value.trim(),
+            email: $("#usuario-email").value.trim(),
+            clave: $("#usuario-clave").value,
+            rol: $("#usuario-rol").value,
+          }),
+        });
+        $("#dialogo-usuario").close();
+        avisar("Usuario creado. Ya puede entrar al panel con su correo y contraseña.");
+        cargarEquipo();
+      } catch (err) {
+        $("#form-usuario .error-form").textContent = err.message;
+      }
+    });
+
+    // ---------- arranque: ¿ya había sesión guardada? ----------
+    if (sesion.token) entrar();
+  </script>
+</body>
+</html>

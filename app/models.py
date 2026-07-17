@@ -72,6 +72,12 @@ class Cliente(Base):
     # FASE 3: el "enlace secreto" del portal. El cliente NO usa contraseña:
     # el taller le comparte un link con este código único e inadivinable.
     token_acceso = Column(String, unique=True, index=True, default=token_portal)
+    # FASE 5 (Habeas Data, Ley 1581/2012): cuándo autorizó el cliente el
+    # tratamiento de sus datos. El taller lo confirma al registrarlo.
+    consentimiento_en = Column(DateTime, nullable=True)
+    # MVP CLIENTE: contraseña opcional. El cliente entra la primera vez con
+    # su enlace secreto y desde ahí crea su contraseña (usuario = su correo).
+    clave_hash = Column(String, nullable=True)
     creado_en = Column(DateTime, default=ahora_utc)
 
     taller = relationship("Taller", back_populates="clientes")
@@ -173,6 +179,30 @@ class SuscripcionPush(Base):
     creado_en = Column(DateTime, default=ahora_utc)
 
     cliente = relationship("Cliente")
+
+
+class Cita(Base):
+    """
+    MVP CLIENTE: una solicitud de cita. El dueño del carro la pide desde su
+    portal (fecha deseada + nota) y el taller la gestiona desde el panel.
+
+    Estados: solicitada -> confirmada -> atendida (o cancelada en cualquier
+    punto). Sencillo a propósito: no es una agenda con horas exactas, es el
+    "quiero llevar el carro tal día" que hoy llega por WhatsApp y se pierde.
+    """
+    __tablename__ = "citas"
+
+    id = Column(Integer, primary_key=True, index=True)
+    taller_id = Column(Integer, ForeignKey("talleres.id"), nullable=False)
+    cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
+    vehiculo_id = Column(Integer, ForeignKey("vehiculos.id"), nullable=False)
+    fecha = Column(String, nullable=False)         # "2026-07-20" (día deseado)
+    nota = Column(Text, nullable=True)             # "suena raro al frenar"
+    estado = Column(String, default="solicitada")  # solicitada/confirmada/atendida/cancelada
+    creado_en = Column(DateTime, default=ahora_utc)
+
+    cliente = relationship("Cliente")
+    vehiculo = relationship("Vehiculo")
 
 
 class RecordatorioEnviado(Base):

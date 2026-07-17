@@ -4,8 +4,9 @@ venv/
 __pycache__/
 *.pyc
 
-# Base de datos local (SQLite)
+# Base de datos local (SQLite) y sus respaldos
 *.db
+respaldos/
 
 # Variables de entorno con secretos
 .env

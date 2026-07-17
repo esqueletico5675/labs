@@ -126,6 +126,22 @@
     .chip.proximo { background: rgba(217,119,6,.14); color: #fcd34d; border: 1px solid rgba(217,119,6,.5); }
     .chip.al_dia  { background: rgba(5,150,105,.14); color: #6ee7b7; border: 1px solid rgba(5,150,105,.5); }
 
+    /* ---- formulario de cita (MVP cliente) ---- */
+    .cita-form { display: grid; gap: .6rem; margin-top: .7rem; }
+    .cita-form label { font-size: .78rem; color: var(--tinta2); display: grid; gap: .3rem; }
+    .cita-form input {
+      width: 100%; background: #0d1119; color: var(--tinta);
+      border: 1px solid var(--borde); border-radius: 8px;
+      padding: .6rem .7rem; min-height: 44px; font: inherit;
+      color-scheme: dark;   /* el calendario del navegador sale oscuro */
+    }
+    .cita-form button {
+      background: #2563eb; color: #fff; border: none; border-radius: 10px;
+      padding: .65rem 1rem; min-height: 44px; font: inherit; font-weight: 600;
+      cursor: pointer;
+    }
+    .cita-form button:hover { filter: brightness(1.15); }
+
     /* ---- bitácora (historial) tipo tiquete de taller ---- */
     details { margin-top: 1rem; }
     summary {
@@ -171,6 +187,11 @@
   <main id="contenido">
     <div class="aviso">Encendiendo el tablero…</div>
   </main>
+  <footer style="max-width:680px;margin:0 auto;padding:0 1rem 2rem;text-align:center;">
+    <a href="privacidad.html" style="color:#94a3b8;font-size:.75rem;">
+      Política de tratamiento de datos personales
+    </a>
+  </footer>
 
   <script>
     const parametros = new URLSearchParams(location.search);
@@ -243,14 +264,93 @@
     function pedirToken(mensaje) {
       contenido.innerHTML = `
         <div class="aviso">
-          <p>${mensaje}</p>
+          <p><b style="color:#e6edf5">Entra con tu cuenta</b></p>
+          <input id="login-email" type="email" placeholder="Tu correo" autocomplete="username">
+          <input id="login-clave" type="password" placeholder="Tu contraseña" autocomplete="current-password">
+          <button onclick="entrarConClave()">Entrar</button>
+          <p id="login-error" style="color:#fca5a5;font-size:.8rem;min-height:1em;margin-top:.5rem;"></p>
+
+          <button onclick="mostrarCrearCuenta()" id="btn-ir-crear"
+                  style="background:none;border:none;color:#93c5fd;text-decoration:underline;
+                         font-size:.82rem;cursor:pointer;padding:.4rem;">
+            ¿Primera vez? Crea tu cuenta con el código del taller
+          </button>
+
+          <!-- crear cuenta: código del taller + contraseña nueva -->
+          <div id="zona-crear" style="display:none;">
+            <hr style="border:none;border-top:1px solid #1f2937;margin:1rem 0;">
+            <p style="font-size:.8rem;"><b style="color:#e6edf5">Crear mi cuenta</b><br>
+            El taller te dio un código (o un enlace que lo contiene). Pégalo y elige tu contraseña:</p>
+            <input id="crear-token" placeholder="Código que te dio el taller">
+            <input id="crear-clave" type="password" placeholder="Tu contraseña (mínimo 6)" autocomplete="new-password">
+            <input id="crear-clave2" type="password" placeholder="Repite la contraseña" autocomplete="new-password">
+            <button onclick="crearCuenta()">Crear cuenta y entrar</button>
+            <p id="crear-error" style="color:#fca5a5;font-size:.8rem;min-height:1em;margin-top:.5rem;"></p>
+          </div>
+
+          <hr style="border:none;border-top:1px solid #1f2937;margin:1rem 0;">
+          <p style="font-size:.8rem;">${mensaje}</p>
           <input id="campo-token" placeholder="Pega aquí tu código de acceso">
           <button onclick="usarToken()">Encender tablero</button>
         </div>`;
     }
+
+    function mostrarCrearCuenta() {
+      document.getElementById("zona-crear").style.display = "";
+      document.getElementById("btn-ir-crear").style.display = "none";
+      document.getElementById("crear-token").focus();
+    }
+
+    // Crea la cuenta: valida el código, guarda la contraseña y entra directo.
+    async function crearCuenta() {
+      const error = document.getElementById("crear-error");
+      let codigo = document.getElementById("crear-token").value.trim();
+      const clave = document.getElementById("crear-clave").value;
+      const clave2 = document.getElementById("crear-clave2").value;
+      // si pegó el enlace completo en vez del código, sacamos el código solo
+      if (codigo.includes("t=")) codigo = codigo.split("t=")[1].split("&")[0];
+      if (!codigo) { error.textContent = "Pega el código que te dio el taller."; return; }
+      if (clave.length < 6) { error.textContent = "La contraseña necesita mínimo 6 caracteres."; return; }
+      if (clave !== clave2) { error.textContent = "Las contraseñas no coinciden."; return; }
+      try {
+        const r = await fetch(`/portal/${encodeURIComponent(codigo)}/clave`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clave }),
+        });
+        const datos = await r.json();
+        if (!r.ok) {
+          error.textContent = r.status === 404
+            ? "Ese código no es válido. Verifícalo con tu taller."
+            : (datos.detail || "No se pudo crear la cuenta.");
+          return;
+        }
+        // cuenta creada: entramos de una con el mismo código
+        location.search = "?t=" + encodeURIComponent(codigo);
+      } catch { error.textContent = "Sin conexión. Intenta de nuevo."; }
+    }
     function usarToken() {
       const valor = document.getElementById("campo-token").value.trim();
       if (valor) location.search = "?t=" + encodeURIComponent(valor);
+    }
+
+    // MVP: login con correo + contraseña. El servidor devuelve el mismo
+    // token del portal, así que el resto de la app no cambia en nada.
+    async function entrarConClave() {
+      const email = document.getElementById("login-email").value.trim();
+      const clave = document.getElementById("login-clave").value;
+      const error = document.getElementById("login-error");
+      if (!email || !clave) { error.textContent = "Escribe correo y contraseña."; return; }
+      try {
+        const r = await fetch("/portal-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, clave }),
+        });
+        const datos = await r.json();
+        if (!r.ok) { error.textContent = datos.detail || "No se pudo entrar."; return; }
+        location.search = "?t=" + encodeURIComponent(datos.token_acceso);
+      } catch { error.textContent = "Sin conexión. Intenta de nuevo."; }
     }
 
     async function cargar() {
@@ -266,6 +366,7 @@
         localStorage.setItem("token_portal", token);
         clavePublicaPush = datos.push_clave_publica;
         pintar(datos);
+        cargarCitas();
         prepararAvisos();
       } catch (e) {
         contenido.innerHTML = `<div class="aviso">Sin conexión. Intenta cuando tengas internet.</div>`;
@@ -314,8 +415,86 @@
               ).join("")}
             </div>
           </details>` : ""}
+
+          <!-- MVP: pedir cita para ESTE vehículo -->
+          <details class="cita">
+            <summary>📅 Agendar cita para este vehículo</summary>
+            <div class="cita-form">
+              <label>¿Qué día te sirve?
+                <input type="date" id="cita-fecha-${v.vehiculo_id}" min="${new Date().toISOString().slice(0,10)}">
+              </label>
+              <label>¿Qué le pasa o qué necesita? (opcional)
+                <input id="cita-nota-${v.vehiculo_id}" placeholder="Ej: cambio de aceite, suena al frenar...">
+              </label>
+              <button onclick="pedirCita(${v.vehiculo_id})">Solicitar cita</button>
+              <p id="cita-msj-${v.vehiculo_id}" style="font-size:.78rem;min-height:1em;"></p>
+            </div>
+          </details>
         </section>`;
       }).join("");
+
+      // sección "mis citas" + cuenta (crear contraseña), al final
+      contenido.innerHTML += `
+        <section class="cluster" id="zona-citas" style="display:none;">
+          <div class="cluster-cabeza"><div class="modelo"><b>Mis citas</b></div></div>
+          <div id="lista-citas" class="bitacora" style="margin-top:0;"></div>
+        </section>
+        ${!datos.tiene_clave ? `
+        <section class="cluster">
+          <div class="cluster-cabeza"><div class="modelo"><b>Crea tu contraseña</b>y entra sin el enlace</div></div>
+          ${datos.tiene_email ? `
+          <div class="cita-form">
+            <input type="password" id="clave-nueva" placeholder="Contraseña (mínimo 6)" autocomplete="new-password">
+            <button onclick="crearClave()">Guardar contraseña</button>
+            <p id="clave-msj" style="font-size:.78rem;min-height:1em;"></p>
+          </div>` : `
+          <p style="font-size:.82rem;color:#94a3b8;">Pídele al taller que registre tu
+          correo: será tu usuario para entrar.</p>`}
+        </section>` : ""}`;
+    }
+
+    const ETIQUETA_CITA = { solicitada: "⏳ Esperando confirmación", confirmada: "✅ Confirmada",
+                            atendida: "✔ Atendida", cancelada: "✖ Cancelada" };
+
+    async function cargarCitas() {
+      const r = await fetch(`/portal/${encodeURIComponent(token)}/citas`);
+      if (!r.ok) return;
+      const citas = await r.json();
+      if (!citas.length) return;
+      document.getElementById("zona-citas").style.display = "";
+      document.getElementById("lista-citas").innerHTML = citas.map(c =>
+        `<div><b>${c.fecha}</b> · ${c.placa} · ${ETIQUETA_CITA[c.estado] || c.estado}${c.nota ? " · " + c.nota : ""}</div>`
+      ).join("");
+    }
+
+    async function pedirCita(vehiculoId) {
+      const fecha = document.getElementById("cita-fecha-" + vehiculoId).value;
+      const nota = document.getElementById("cita-nota-" + vehiculoId).value.trim();
+      const msj = document.getElementById("cita-msj-" + vehiculoId);
+      if (!fecha) { msj.style.color = "#fca5a5"; msj.textContent = "Elige el día."; return; }
+      const r = await fetch(`/portal/${encodeURIComponent(token)}/citas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vehiculo_id: vehiculoId, fecha, nota: nota || null }),
+      });
+      const datos = await r.json();
+      msj.style.color = r.ok ? "#6ee7b7" : "#fca5a5";
+      msj.textContent = r.ok ? datos.mensaje : (datos.detail || "No se pudo solicitar.");
+      if (r.ok) cargarCitas();
+    }
+
+    async function crearClave() {
+      const clave = document.getElementById("clave-nueva").value;
+      const msj = document.getElementById("clave-msj");
+      if (clave.length < 6) { msj.style.color = "#fca5a5"; msj.textContent = "Mínimo 6 caracteres."; return; }
+      const r = await fetch(`/portal/${encodeURIComponent(token)}/clave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clave }),
+      });
+      const datos = await r.json();
+      msj.style.color = r.ok ? "#6ee7b7" : "#fca5a5";
+      msj.textContent = r.ok ? datos.mensaje : (datos.detail || "No se pudo guardar.");
     }
 
     // -----------------------------------------------------

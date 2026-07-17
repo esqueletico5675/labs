@@ -26,7 +26,11 @@ un poco de HTML. Por eso:
 ## Decisiones técnicas ya tomadas
 
 - **Backend:** FastAPI (Python). Ya lo sabemos, es la base.
-- **Base de datos:** SQLite para desarrollar; PostgreSQL para producción.
+- **Base de datos:** SQLite para desarrollar; PostgreSQL para producción
+  (**Supabase**, plan gratis). Se elige con la variable de entorno
+  `DATABASE_URL` (sin definirla = SQLite local). Usar la URI del "Session
+  pooler" de Supabase (la conexión directa es solo IPv6). Driver:
+  `psycopg2-binary` (ya instalado en el venv).
 - **Frontend / "app":** PWA (app web instalable) para cubrir Android e iPhone
   con un solo código. Nada de apps nativas separadas por ahora.
 - **Ir a las tiendas (Play/App Store):** después, envolviendo la PWA con Capacitor.
@@ -50,6 +54,12 @@ Backend de FastAPI funcionando. Estructura:
 - `app/main.py` — la API (todos los endpoints, CRUD completo + tablero del
   taller + dependencias de seguridad JWT + endpoints del portal).
 - `portal/` — la PWA del cliente (index.html, manifest.json, sw.js, icono.svg).
+- `panel/` — Fase 4: el panel web del PERSONAL del taller (servido en `/panel`):
+  login JWT, tablero "¿a quién llamar hoy?", clientes (con enlace del portal y
+  regenerar token), vehículos + ingresos, y reglas de mantenimiento. HTML/JS
+  puro, mismo lenguaje visual oscuro del portal. Incluye `manual.html` (el
+  tutorial/libro de instrucciones, 10 secciones): botón "Manual" en la
+  cabecera y enlace en la pantalla de login.
 - `seed.py` — datos de ejemplo (imprime login del taller y enlace del portal).
 - `enviar_recordatorios.py` — tarea diaria de correos (se programa con cron /
   Programador de tareas de Windows).
@@ -80,10 +90,60 @@ es la fuente confiable del km (lo registra en cada ingreso).
   SMTP). El diseño del portal es un "tablero de instrumentos": odómetro,
   medidores radiales por mantenimiento, placa amarilla colombiana; paleta de
   estados validada para daltonismo (#059669 / #d97706 / #ef4444 sobre #10161f).
-  Pendiente menor: endpoint para regenerar el token de un cliente.
-- **Fase 4 (siguiente):** multi-taller a fondo + WhatsApp.
-- **Fase 4:** multi-taller a fondo + WhatsApp.
-- **Fase 5:** seguridad completa, Habeas Data (Ley 1581/2012 Colombia), backups, cobro.
+- **Fase 4 (en curso):** HECHO: (a) endpoint regenerar `token_acceso` de
+  cliente (anula el enlace viejo; solo admin); (b) **panel web del taller** en
+  `panel/` (servido en `/panel`); (c) **registro self-service**: POST
+  `/registro` crea taller + admin + reglas por defecto en una transacción y
+  devuelve el token (el viejo POST /talleres público se eliminó, igual que el
+  hueco del "primer usuario sin token"); (d) **roles**: dependencia
+  `admin_del_taller` protege equipo (GET/POST usuarios), reglas de
+  mantenimiento (crear/editar/borrar) y regenerar token — el mecánico registra
+  ingresos/clientes/vehículos y ve todo lo demás; el panel oculta lo admin con
+  la clase CSS `.solo-admin`; (e) **WhatsApp** vía Meta Cloud API en
+  `notificaciones.py` (`enviar_whatsapp`, `redactar_whatsapp`,
+  `normalizar_telefono` con indicativo 57): sin `WHATSAPP_TOKEN` +
+  `WHATSAPP_PHONE_ID` simula en consola, como el correo sin SMTP; integrado al
+  envío diario (canal `whatsapp`/`whatsapp_simulado` en
+  `recordatorios_enviados`). OJO producción: fuera de la ventana de 24 h Meta
+  exige plantillas pre-aprobadas (pendiente al activar el piloto).
+- **Fase 5 (en curso):** HECHO: (a) **backups** — `respaldar_bd.py` usa la API
+  de respaldo de SQLite (segura con la BD en uso), copias fechadas en
+  `respaldos/` (ignorada por git) con rotación (`RESPALDOS_MAXIMOS`, 30 por
+  defecto); se programa como tarea diaria igual que `enviar_recordatorios.py`;
+  (b) **endurecimiento** — con `ENTORNO=produccion` el servidor NO arranca sin
+  `JWT_SECRETO` real, y el login bloquea cada correo 15 min tras 5 intentos
+  fallidos (contador en memoria, por correo; con varios servidores se movería
+  a BD/Redis); (c) **Habeas Data (Ley 1581/2012)** — política de privacidad en
+  `portal/privacidad.html` (enlazada desde portal, registro y formulario de
+  cliente), consentimiento obligatorio al crear cliente (columna
+  `clientes.consentimiento_en`; sin `consentimiento: true` la API responde
+  422), y derecho a supresión: DELETE
+  `/talleres/{id}/clientes/{id}/datos-personales` (solo admin) anonimiza al
+  cliente, borra suscripciones push y mata el enlace del portal (enlace y
+  regenerar responden 410 después); el historial técnico del vehículo se
+  conserva anónimo; (d) **migraciones**: `migrar_bd.py` agrega columnas
+  nuevas a BDs existentes (correr tras actualizar el código; es idempotente).
+  El **cobro a talleres quedó descartado por ahora** (decisión del equipo).
+- **MVP CLIENTE (hecho):** (a) **login del cliente**: crea su contraseña
+  desde su enlace secreto (`POST /portal/{token}/clave`; usuario = su
+  correo) y entra en `/app/` con `POST /portal-login`, que devuelve su
+  `token_acceso` (la PWA no cambia; mismo freno anti fuerza bruta);
+  (b) **citas**: tabla `citas` (solicitada→confirmada→atendida/cancelada),
+  el cliente pide fecha+nota por vehículo desde el portal (máx. 1 pendiente
+  por vehículo), y el taller las gestiona en la sección "Citas" del panel
+  (`GET/PATCH /talleres/{id}/citas`). La supresión Habeas Data también
+  apaga el login del cliente.
+- **PILOTO (en marcha):** la guía completa está en `GUIA_PILOTO.md`
+  (Supabase + Render + Gmail + cron). **DECISIÓN MVP: el canal de
+  recordatorios es el CORREO** (ya construido, gratis, sin aprobaciones);
+  WhatsApp queda opcional para después. WhatsApp cuando se active:
+  `enviar_whatsapp` soporta **plantillas de Meta** — con
+  `WHATSAPP_PLANTILLA=recordatorio_mantenimiento` (+`WHATSAPP_IDIOMA`,
+  es_CO por defecto) manda plantilla con 3 variables (nombre, placa,
+  pendientes); sin ella, texto libre (solo ventana de 24 h / número de
+  prueba). `probar_whatsapp.py <numero>` verifica credenciales e imprime
+  el motivo exacto si Meta rechaza. Los errores HTTP de Meta se muestran
+  completos en consola.
 
 ## Reglas y convenciones
 
@@ -95,7 +155,13 @@ es la fuente confiable del km (lo registra en cada ingreso).
 - Idioma del código y comentarios: **español**.
 - Para la hora actual usar SIEMPRE `ahora_utc()` de `app/utilidades.py`
   (nunca `datetime.utcnow()`, que está obsoleto).
-- Credenciales (ej. clave SMTP) van en **variables de entorno**, nunca en el código.
+- Credenciales (ej. clave SMTP) van en **variables de entorno**, nunca en el
+  código. Viven en el archivo **`.env`** de la raíz (plantilla con
+  instrucciones; ignorado por git), cargado por `cargar_env()` de
+  `app/utilidades.py` al importar `app`. La terminal gana sobre el archivo.
+  **PROHIBIDO para Claude leer o mostrar `.env`**: contiene los secretos del
+  usuario. Si hay que depurar variables, pedirle al usuario que verifique él
+  mismo, sin pegar valores en el chat.
 
 ## Cómo trabajar conmigo en cada sesión
 
