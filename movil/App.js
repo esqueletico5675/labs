@@ -11,15 +11,17 @@ import { StatusBar } from 'expo-status-bar';
 import { ProveedorApariencia, useTema } from './src/apariencia';
 import { Cargando } from './src/componentes';
 import Ajustes from './src/pantallas/Ajustes';
+import CitasTaller from './src/pantallas/CitasTaller';
 import Entrar from './src/pantallas/Entrar';
 import MisVehiculos from './src/pantallas/MisVehiculos';
+import TableroTaller from './src/pantallas/TableroTaller';
 import Vehiculo from './src/pantallas/Vehiculo';
 import { ProveedorSesion, useSesion } from './src/sesion';
 
 const Pila = createNativeStackNavigator();
 
 function Pantallas() {
-  const { token, listo } = useSesion();
+  const { sesion, listo } = useSesion();
   const { esquema, colores } = useTema();
 
   // La barra de estado (hora, batería) se invierte según el modo.
@@ -48,7 +50,7 @@ function Pantallas() {
   if (!listo) return <Cargando mensaje="Abriendo la app…" />;
 
   // Sin sesión: lo ÚNICO que existe es la pantalla de entrar.
-  if (!token) {
+  if (!sesion) {
     return (
       <>
         <Entrar />
@@ -57,7 +59,9 @@ function Pantallas() {
     );
   }
 
-  // Con sesión: las pantallas del cliente, apiladas como cartas.
+  // Con sesión: cada tipo de usuario tiene SUS pantallas.
+  const esTaller = sesion.tipo === 'taller';
+
   return (
     <NavigationContainer theme={temaNavegacion}>
       <Pila.Navigator
@@ -68,20 +72,40 @@ function Pantallas() {
           headerShadowVisible: false,
         }}
       >
-        <Pila.Screen
-          name="MisVehiculos"
-          component={MisVehiculos}
-          options={{ title: 'Mis vehículos' }}
-        />
-        <Pila.Screen
-          name="Vehiculo"
-          component={Vehiculo}
-          options={({ route }) => ({
-            title: route.params.vehiculo.placa,
-            headerBackTitle: 'Atrás',
-          })}
-        />
-        <Pila.Screen name="Ajustes" component={Ajustes} options={{ title: 'Ajustes' }} />
+        {esTaller ? (
+          /* PERSONAL DEL TALLER: tablero de llamadas y citas. */
+          <>
+            <Pila.Screen
+              name="TableroTaller"
+              component={TableroTaller}
+              options={{ title: 'Tablero' }}
+            />
+            <Pila.Screen
+              name="CitasTaller"
+              component={CitasTaller}
+              options={{ title: 'Citas', headerBackTitle: 'Atrás' }}
+            />
+            <Pila.Screen name="Ajustes" component={Ajustes} options={{ title: 'Ajustes' }} />
+          </>
+        ) : (
+          /* DUEÑO DEL CARRO: sus vehículos y su detalle. */
+          <>
+            <Pila.Screen
+              name="MisVehiculos"
+              component={MisVehiculos}
+              options={{ title: 'Mis vehículos' }}
+            />
+            <Pila.Screen
+              name="Vehiculo"
+              component={Vehiculo}
+              options={({ route }) => ({
+                title: route.params.vehiculo.placa,
+                headerBackTitle: 'Atrás',
+              })}
+            />
+            <Pila.Screen name="Ajustes" component={Ajustes} options={{ title: 'Ajustes' }} />
+          </>
+        )}
       </Pila.Navigator>
       <StatusBar style={estiloBarra} />
     </NavigationContainer>

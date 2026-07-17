@@ -13,12 +13,16 @@ import { useSesion } from '../sesion';
 import { ESPACIO, LETRA, RADIO } from '../tema';
 
 export default function Ajustes({ route }) {
-  const { token, salir } = useSesion();
+  const { sesion, token, salir } = useSesion();
   const { esquema, colores, cambiarEsquema } = useTema();
   const estilos = useMemo(() => crearEstilos(colores), [colores]);
 
-  // El nombre y el taller llegan desde la pantalla anterior.
+  // ¿Quién está usando la app? Del personal tenemos los datos en la
+  // sesión; del cliente llegan desde la pantalla anterior.
+  const esTaller = sesion?.tipo === 'taller';
   const { cliente, taller } = route.params || {};
+  const nombreMostrar = esTaller ? sesion.nombre : cliente;
+  const tallerMostrar = esTaller ? sesion.taller : taller;
 
   // Estado del interruptor de avisos de ESTE celular.
   const [avisosOn, setAvisosOn] = useState(false);
@@ -61,9 +65,17 @@ export default function Ajustes({ route }) {
     >
       <Tarjeta>
         <Text style={estilos.etiqueta}>Tu nombre</Text>
-        <Text style={estilos.valor}>{cliente || '—'}</Text>
+        <Text style={estilos.valor}>{nombreMostrar || '—'}</Text>
         <Text style={[estilos.etiqueta, { marginTop: ESPACIO.m }]}>Tu taller</Text>
-        <Text style={estilos.valor}>{taller || '—'}</Text>
+        <Text style={estilos.valor}>{tallerMostrar || '—'}</Text>
+        {esTaller && (
+          <>
+            <Text style={[estilos.etiqueta, { marginTop: ESPACIO.m }]}>Tu rol</Text>
+            <Text style={estilos.valor}>
+              {sesion.rol === 'admin' ? '👑 Administrador' : '🔧 Mecánico'}
+            </Text>
+          </>
+        )}
       </Tarjeta>
 
       {/* El interruptor de apariencia: dos botones grandes, el activo resaltado. */}
@@ -88,24 +100,27 @@ export default function Ajustes({ route }) {
         </View>
       </Tarjeta>
 
-      <Tarjeta>
-        <Text style={estilos.etiqueta}>Avisos en tu celular</Text>
-        <Text style={estilos.parrafo}>
-          {avisosOn
-            ? '🔔 Este celular recibe avisos cuando a tu carro le toca mantenimiento.'
-            : '🔕 Actívalos para que te avisemos aquí mismo cuando a tu carro le toque mantenimiento.'}
-        </Text>
-        {mensajeAvisos && <Text style={estilos.notaAvisos}>{mensajeAvisos}</Text>}
-        <View style={{ marginTop: ESPACIO.m }}>
-          <Boton
-            titulo={
-              trabajando ? 'Un momento…' : avisosOn ? 'Apagar avisos' : 'Activar avisos 🔔'
-            }
-            onPress={alternarAvisos}
-            deshabilitado={trabajando}
-          />
-        </View>
-      </Tarjeta>
+      {/* Los avisos push son del DUEÑO del carro; al personal no le aplican. */}
+      {!esTaller && (
+        <Tarjeta>
+          <Text style={estilos.etiqueta}>Avisos en tu celular</Text>
+          <Text style={estilos.parrafo}>
+            {avisosOn
+              ? '🔔 Este celular recibe avisos cuando a tu carro le toca mantenimiento.'
+              : '🔕 Actívalos para que te avisemos aquí mismo cuando a tu carro le toque mantenimiento.'}
+          </Text>
+          {mensajeAvisos && <Text style={estilos.notaAvisos}>{mensajeAvisos}</Text>}
+          <View style={{ marginTop: ESPACIO.m }}>
+            <Boton
+              titulo={
+                trabajando ? 'Un momento…' : avisosOn ? 'Apagar avisos' : 'Activar avisos 🔔'
+              }
+              onPress={alternarAvisos}
+              deshabilitado={trabajando}
+            />
+          </View>
+        </Tarjeta>
+      )}
 
       <Boton titulo="Cerrar sesión" tono="peligro" onPress={salir} />
 

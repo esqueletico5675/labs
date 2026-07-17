@@ -84,3 +84,44 @@ export function eliminarPushMovil(token, expoToken) {
     body: JSON.stringify({ expo_token: expoToken }),
   });
 }
+
+// ============================================================
+//  El lado del TALLER (personal): login con JWT y sus endpoints
+// ============================================================
+
+// --- Entrar como personal del taller. El backend usa el formulario
+//     OAuth2: los campos van como formulario, no como JSON, y el
+//     correo se llama "username". Devuelve el JWT + datos del usuario. ---
+export function entrarTaller(email, clave) {
+  return pedir('/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body:
+      'username=' + encodeURIComponent(email.trim().toLowerCase()) +
+      '&password=' + encodeURIComponent(clave),
+  });
+}
+
+// Cabeceras con el JWT: así el backend sabe quién pregunta y de qué taller.
+function conJwt(jwt) {
+  return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt };
+}
+
+// --- El tablero: vehículos con mantenimientos vencidos o próximos ---
+export function tableroTaller(jwt, tallerId) {
+  return pedir(`/talleres/${tallerId}/recordatorios`, { headers: conJwt(jwt) });
+}
+
+// --- Las citas del taller (primero las que están por confirmar) ---
+export function citasTaller(jwt, tallerId) {
+  return pedir(`/talleres/${tallerId}/citas`, { headers: conJwt(jwt) });
+}
+
+// --- Confirmar / atender / cancelar una cita ---
+export function cambiarEstadoCita(jwt, tallerId, citaId, estado) {
+  return pedir(`/talleres/${tallerId}/citas/${citaId}`, {
+    method: 'PATCH',
+    headers: conJwt(jwt),
+    body: JSON.stringify({ estado }),
+  });
+}
