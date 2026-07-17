@@ -8,6 +8,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState } from 'react';
 import * as api from './api';
+import { desactivarAvisos } from './avisos';
 
 const LLAVE_GUARDADA = 'token_acceso';
 
@@ -33,7 +34,13 @@ export function ProveedorSesion({ children }) {
   }
 
   // Salir: borra la sesión del celular y vuelve a la pantalla de entrar.
+  // También apaga los avisos: si salió, este celular ya no debe recibirlos.
   async function salir() {
+    try {
+      await desactivarAvisos(token);
+    } catch (e) {
+      // Si no se pudo (sin internet), salimos igual.
+    }
     await AsyncStorage.removeItem(LLAVE_GUARDADA);
     setToken(null);
   }

@@ -4,20 +4,50 @@
 // Poquitas cosas, bien claras: quién soy, el modo claro/oscuro,
 // y cerrar sesión. (Las notificaciones push llegarán aquí luego.)
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTema } from '../apariencia';
+import { activarAvisos, avisosActivos, desactivarAvisos } from '../avisos';
 import { Boton, Tarjeta } from '../componentes';
 import { useSesion } from '../sesion';
 import { ESPACIO, LETRA, RADIO } from '../tema';
 
 export default function Ajustes({ route }) {
-  const { salir } = useSesion();
+  const { token, salir } = useSesion();
   const { esquema, colores, cambiarEsquema } = useTema();
   const estilos = useMemo(() => crearEstilos(colores), [colores]);
 
   // El nombre y el taller llegan desde la pantalla anterior.
   const { cliente, taller } = route.params || {};
+
+  // Estado del interruptor de avisos de ESTE celular.
+  const [avisosOn, setAvisosOn] = useState(false);
+  const [mensajeAvisos, setMensajeAvisos] = useState(null);
+  const [trabajando, setTrabajando] = useState(false);
+
+  useEffect(() => {
+    avisosActivos().then(setAvisosOn);
+  }, []);
+
+  async function alternarAvisos() {
+    setMensajeAvisos(null);
+    setTrabajando(true);
+    try {
+      if (avisosOn) {
+        await desactivarAvisos(token);
+        setAvisosOn(false);
+        setMensajeAvisos('Avisos apagados en este celular.');
+      } else {
+        await activarAvisos(token);
+        setAvisosOn(true);
+        setMensajeAvisos('¡Listo! Este celular recibirá los avisos. 🔔');
+      }
+    } catch (e) {
+      setMensajeAvisos(e.message);
+    } finally {
+      setTrabajando(false);
+    }
+  }
 
   const opciones = [
     { id: 'claro', etiqueta: '☀️ Claro' },
@@ -61,9 +91,20 @@ export default function Ajustes({ route }) {
       <Tarjeta>
         <Text style={estilos.etiqueta}>Avisos en tu celular</Text>
         <Text style={estilos.parrafo}>
-          🔔 Muy pronto la app te avisará aquí mismo cuando a tu carro le
-          toque mantenimiento. Por ahora te seguimos avisando por correo.
+          {avisosOn
+            ? '🔔 Este celular recibe avisos cuando a tu carro le toca mantenimiento.'
+            : '🔕 Actívalos para que te avisemos aquí mismo cuando a tu carro le toque mantenimiento.'}
         </Text>
+        {mensajeAvisos && <Text style={estilos.notaAvisos}>{mensajeAvisos}</Text>}
+        <View style={{ marginTop: ESPACIO.m }}>
+          <Boton
+            titulo={
+              trabajando ? 'Un momento…' : avisosOn ? 'Apagar avisos' : 'Activar avisos 🔔'
+            }
+            onPress={alternarAvisos}
+            deshabilitado={trabajando}
+          />
+        </View>
       </Tarjeta>
 
       <Boton titulo="Cerrar sesión" tono="peligro" onPress={salir} />
@@ -134,6 +175,12 @@ function crearEstilos(c) {
       color: c.texto,
       fontSize: LETRA.normal,
       lineHeight: 24,
+    },
+    notaAvisos: {
+      color: c.textoSuave,
+      fontSize: LETRA.pequena,
+      lineHeight: 20,
+      marginTop: ESPACIO.s,
     },
     pie: {
       color: c.textoSuave,

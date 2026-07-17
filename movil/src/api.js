@@ -68,3 +68,19 @@ export function pedirCita(token, vehiculoId, fecha, nota) {
     body: JSON.stringify({ vehiculo_id: vehiculoId, fecha, nota }),
   });
 }
+
+// --- Avisos push: registrar el token de ESTE celular en el backend ---
+export function registrarPushMovil(token, expoToken) {
+  return pedir(`/portal/${token}/push-movil`, {
+    method: 'POST',
+    body: JSON.stringify({ expo_token: expoToken }),
+  });
+}
+
+// --- Avisos push: borrar el token de este celular (apagar avisos) ---
+export function eliminarPushMovil(token, expoToken) {
+  return pedir(`/portal/${token}/push-movil`, {
+    method: 'DELETE',
+    body: JSON.stringify({ expo_token: expoToken }),
+  });
+}

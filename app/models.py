@@ -176,6 +176,10 @@ class SuscripcionPush(Base):
     endpoint = Column(Text, unique=True, nullable=False)  # URL única del navegador
     p256dh = Column(String, nullable=False)  # llave pública de cifrado
     auth = Column(String, nullable=False)    # secreto de autenticación
+    # APP MÓVIL: canal del dispositivo. "web" = navegador (PWA, VAPID);
+    # "expo" = celular con la app (endpoint guarda el ExponentPushToken,
+    # y p256dh/auth van vacíos porque Expo no los usa).
+    tipo = Column(String, default="web", nullable=False)
     creado_en = Column(DateTime, default=ahora_utc)
 
     cliente = relationship("Cliente")

@@ -102,6 +102,54 @@ def enviar_push(db, suscripcion, titulo: str, cuerpo: str) -> bool:
 
 
 # ============================================================
+#  Push a la APP MÓVIL — vía el servicio de push de Expo
+#
+#  La app del celular (React Native + Expo) registra su "ExponentPushToken"
+#  con POST /portal/{token}/push-movil. Para avisarle, hacemos UN POST al
+#  servicio de Expo (gratis, sin llaves) y Expo se encarga de repartir a
+#  Google (Android) y Apple (iPhone) por nosotros.
+# ============================================================
+URL_PUSH_EXPO = "https://exp.host/--/api/v2/push/send"
+
+
+def enviar_push_expo(db, suscripcion, titulo: str, cuerpo: str) -> bool:
+    """
+    Manda UNA notificación a UN celular con la app. Devuelve True si salió.
+    Si Expo responde "DeviceNotRegistered" (desinstaló la app o quitó el
+    permiso), borramos la suscripción para no insistir.
+    """
+    peticion = urllib.request.Request(
+        URL_PUSH_EXPO,
+        data=json.dumps({
+            "to": suscripcion.endpoint,   # el ExponentPushToken del celular
+            "title": titulo,
+            "body": cuerpo,
+            "sound": "default",
+        }).encode("utf-8"),
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(peticion, timeout=15) as r:
+            respuesta = json.load(r)
+    except Exception:
+        # Sin internet o Expo caído: hoy no llegó, mañana se reintenta.
+        return False
+
+    dato = respuesta.get("data") or {}
+    if isinstance(dato, list):  # Expo responde lista si mandas varios
+        dato = dato[0] if dato else {}
+    if dato.get("status") == "ok":
+        return True
+
+    detalles = dato.get("details") or {}
+    if detalles.get("error") == "DeviceNotRegistered":
+        db.delete(suscripcion)
+        db.commit()
+    return False
+
+
+# ============================================================
 #  WhatsApp (Fase 4) — vía la API oficial de Meta (Cloud API)
 #
 #  Se configura con variables de entorno (nunca en el código):
@@ -390,7 +438,12 @@ def enviar_recordatorios_taller(db, taller) -> dict:
             titulo_push = f"{vehiculo.placa}: mantenimiento pendiente"
             cuerpo_push = ", ".join(p["tipo"] for p in nuevos)
             for suscripcion in suscripciones:
-                if enviar_push(db, suscripcion, titulo_push, cuerpo_push):
+                # Cada dispositivo sabe su canal: navegador (web) o celular (expo).
+                if (suscripcion.tipo or "web") == "expo":
+                    entregado = enviar_push_expo(db, suscripcion, titulo_push, cuerpo_push)
+                else:
+                    entregado = enviar_push(db, suscripcion, titulo_push, cuerpo_push)
+                if entregado:
                     push_entregados += 1
             resumen["push"] += push_entregados
 

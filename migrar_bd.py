@@ -25,6 +25,7 @@ from app.database import engine
 MIGRACIONES = [
     ("clientes", "consentimiento_en", "TIMESTAMP"),  # Habeas Data (Ley 1581/2012)
     ("clientes", "clave_hash", "TEXT"),              # MVP cliente: login con contraseña
+    ("suscripciones_push", "tipo", "TEXT"),          # app móvil: canal "web" o "expo"
 ]
 
 if __name__ == "__main__":

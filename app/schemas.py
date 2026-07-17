@@ -191,6 +191,11 @@ class SuscripcionPushEliminar(BaseModel):
     endpoint: str
 
 
+class PushMovil(BaseModel):
+    """La app móvil (Expo) manda el push token del celular al activar avisos."""
+    expo_token: str = Field(min_length=10)
+
+
 # ---------- Ingreso (visita al taller) ----------
 class IngresoCrear(BaseModel):
     vehiculo_id: int

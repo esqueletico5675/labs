@@ -11,6 +11,7 @@ import {
   Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import * as api from '../api';
+import { intentarActivarUnaVez } from '../avisos';
 import { useTema } from '../apariencia';
 import { BandaEstado, CajaError, Cargando, Placa, Tarjeta } from '../componentes';
 import { useSesion } from '../sesion';
@@ -30,6 +31,8 @@ export default function MisVehiculos({ navigation }) {
     try {
       const respuesta = await api.datosPortal(token);
       setDatos(respuesta);
+      // Primera vez aquí: ofrecemos activar los avisos (permiso del sistema).
+      intentarActivarUnaVez(token);
     } catch (e) {
       setError(e.message);
       // Si el enlace fue anulado por el taller, cerramos sesión.

@@ -897,6 +897,49 @@ def desactivar_push(token_acceso: str, datos: schemas.SuscripcionPushEliminar,
     return {"mensaje": "Avisos desactivados en este dispositivo"}
 
 
+@app.post("/portal/{token_acceso}/push-movil")
+def activar_push_movil(token_acceso: str, datos: schemas.PushMovil,
+                       db: Session = Depends(get_db)):
+    """
+    APP MÓVIL: el celular manda su push token de Expo (su "dirección de
+    entrega"). Lo guardamos en la misma tabla de suscripciones, marcado
+    con tipo="expo" para que el envío diario sepa por dónde avisarle.
+    """
+    cliente = cliente_por_token(db, token_acceso)
+
+    # Si este celular ya estaba registrado, lo re-ligamos (p. ej. si otro
+    # miembro de la familia entra en el mismo teléfono) en vez de duplicar.
+    existente = db.query(models.SuscripcionPush).filter(
+        models.SuscripcionPush.endpoint == datos.expo_token
+    ).first()
+    if existente:
+        existente.cliente_id = cliente.id
+        existente.tipo = "expo"
+    else:
+        db.add(models.SuscripcionPush(
+            cliente_id=cliente.id,
+            endpoint=datos.expo_token,
+            p256dh="",  # Expo no usa llaves de cifrado del navegador
+            auth="",
+            tipo="expo",
+        ))
+    db.commit()
+    return {"mensaje": "Avisos activados en este celular"}
+
+
+@app.delete("/portal/{token_acceso}/push-movil")
+def desactivar_push_movil(token_acceso: str, datos: schemas.PushMovil,
+                          db: Session = Depends(get_db)):
+    """APP MÓVIL: apagar los avisos de este celular (o al cerrar sesión)."""
+    cliente = cliente_por_token(db, token_acceso)
+    db.query(models.SuscripcionPush).filter(
+        models.SuscripcionPush.cliente_id == cliente.id,
+        models.SuscripcionPush.endpoint == datos.expo_token,
+    ).delete()
+    db.commit()
+    return {"mensaje": "Avisos desactivados en este celular"}
+
+
 # La PWA (HTML, manifest, service worker) se sirve como archivos estáticos
 # en /app. Es la "app" que el cliente puede instalar en su celular.
 CARPETA_PORTAL = Path(__file__).resolve().parent.parent / "portal"
