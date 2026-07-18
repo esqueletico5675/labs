@@ -71,6 +71,20 @@ export function ProveedorSesion({ children }) {
     });
   }
 
+  // Abrir cuenta de TALLER NUEVO: el backend crea taller + admin y nos
+  // devuelve lo mismo que el login, así que el dueño queda adentro ya.
+  async function registrarTaller(datos) {
+    const r = await api.registrarTaller(datos);
+    await guardar({
+      tipo: 'taller',
+      jwt: r.access_token,
+      tallerId: r.taller_id,
+      nombre: r.nombre,
+      taller: r.taller,
+      rol: r.rol,
+    });
+  }
+
   // Salir: borra la sesión y vuelve a la pantalla de entrar. Si era un
   // cliente, también apaga los avisos push de este celular.
   async function salir() {
@@ -90,7 +104,7 @@ export function ProveedorSesion({ children }) {
 
   return (
     <ContextoSesion.Provider
-      value={{ sesion, token, listo, entrarCliente, entrarTaller, salir }}
+      value={{ sesion, token, listo, entrarCliente, entrarTaller, registrarTaller, salir }}
     >
       {children}
     </ContextoSesion.Provider>

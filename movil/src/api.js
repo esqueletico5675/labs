@@ -104,6 +104,15 @@ export function entrarTaller(email, clave) {
   });
 }
 
+// --- Abrir cuenta: crea el taller + su administrador en un solo paso.
+//     Devuelve lo mismo que el login (JWT + datos): queda logueado ya. ---
+export function registrarTaller(datos) {
+  return pedir('/registro', {
+    method: 'POST',
+    body: JSON.stringify(datos),
+  });
+}
+
 // Cabeceras con el JWT: así el backend sabe quién pregunta y de qué taller.
 function conJwt(jwt) {
   return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt };
