@@ -20,6 +20,10 @@ import * as api from './api';
 
 const LLAVE_TOKEN_PUSH = 'expo_push_token'; // guardado si los avisos están activos
 const LLAVE_YA_INTENTADO = 'avisos_ya_intentados'; // para pedir permiso solo una vez
+// La PREFERENCIA del usuario ('si'/'no') sobrevive al cerrar sesión: así,
+// al volver a entrar, los avisos se reactivan solos sin que tenga que
+// prenderlos otra vez. Solo cambia cuando él toca el botón en Ajustes.
+const LLAVE_QUIERE = 'avisos_preferencia';
 
 // Cómo se muestra una notificación si llega con la app ABIERTA:
 // banner arriba + sonido (sin esto, en primer plano no se vería nada).
@@ -83,6 +87,7 @@ export async function activarAvisos(tokenSesion) {
   const expoToken = await obtenerExpoToken();
   await api.registrarPushMovil(tokenSesion, expoToken); // se lo contamos a FastAPI
   await AsyncStorage.setItem(LLAVE_TOKEN_PUSH, expoToken);
+  await AsyncStorage.setItem(LLAVE_QUIERE, 'si');
   return expoToken;
 }
 
@@ -91,10 +96,12 @@ export async function activarAvisosTaller(jwt, tallerId) {
   const expoToken = await obtenerExpoToken();
   await api.registrarPushTaller(jwt, tallerId, expoToken);
   await AsyncStorage.setItem(LLAVE_TOKEN_PUSH, expoToken);
+  await AsyncStorage.setItem(LLAVE_QUIERE, 'si');
   return expoToken;
 }
 
-// Apaga los avisos del PERSONAL en este celular.
+// Apaga los avisos del PERSONAL en este celular (decisión del usuario:
+// queda registrada y NO se reactivan solos en el próximo login).
 export async function desactivarAvisosTaller(jwt, tallerId) {
   const expoToken = await AsyncStorage.getItem(LLAVE_TOKEN_PUSH);
   if (expoToken) {
@@ -106,21 +113,10 @@ export async function desactivarAvisosTaller(jwt, tallerId) {
     }
   }
   await AsyncStorage.removeItem(LLAVE_TOKEN_PUSH);
+  await AsyncStorage.setItem(LLAVE_QUIERE, 'no');
 }
 
-// Intento silencioso para el PERSONAL al entrar (una sola vez).
-export async function intentarActivarUnaVezTaller(jwt, tallerId) {
-  const ya = await AsyncStorage.getItem(LLAVE_YA_INTENTADO);
-  if (ya) return;
-  await AsyncStorage.setItem(LLAVE_YA_INTENTADO, 'si');
-  try {
-    await activarAvisosTaller(jwt, tallerId);
-  } catch (e) {
-    // Silencio: se puede activar después desde Ajustes.
-  }
-}
-
-// Apaga los avisos de este celular (y avisa al backend para que lo borre).
+// Apaga los avisos de este celular (decisión del usuario, ver arriba).
 export async function desactivarAvisos(tokenSesion) {
   const expoToken = await AsyncStorage.getItem(LLAVE_TOKEN_PUSH);
   if (expoToken) {
@@ -132,6 +128,26 @@ export async function desactivarAvisos(tokenSesion) {
     }
   }
   await AsyncStorage.removeItem(LLAVE_TOKEN_PUSH);
+  await AsyncStorage.setItem(LLAVE_QUIERE, 'no');
+}
+
+// Al CERRAR SESIÓN: se borra el registro en el backend (para que este
+// celular no siga recibiendo avisos de una cuenta que ya salió), pero la
+// PREFERENCIA queda intacta: al volver a entrar se reactivan solos.
+export async function apagarAvisosAlSalir(sesion) {
+  const expoToken = await AsyncStorage.getItem(LLAVE_TOKEN_PUSH);
+  if (expoToken) {
+    try {
+      if (sesion?.tipo === 'taller') {
+        await api.eliminarPushTaller(sesion.jwt, sesion.tallerId, expoToken);
+      } else if (sesion?.tipo === 'cliente') {
+        await api.eliminarPushMovil(sesion.token, expoToken);
+      }
+    } catch (e) {
+      // Sin internet no pasa nada: el backend lo limpiará solo.
+    }
+  }
+  await AsyncStorage.removeItem(LLAVE_TOKEN_PUSH);
 }
 
 // ¿Están activos los avisos en este celular?
@@ -139,16 +155,36 @@ export async function avisosActivos() {
   return !!(await AsyncStorage.getItem(LLAVE_TOKEN_PUSH));
 }
 
-// Intento silencioso al entrar por primera vez: pide permiso UNA sola
-// vez en la vida de la app; si falla (o dicen que no), no molesta más.
-// Siempre se puede activar/desactivar a mano en Ajustes.
-export async function intentarActivarUnaVez(tokenSesion) {
+// Decide en silencio al entrar (lo llaman las pantallas de inicio):
+//   - ya activos en esta sesión        -> no hacer nada
+//   - el usuario los apagó en Ajustes  -> respetar y no molestar
+//   - los tenía activos antes de salir -> reactivarlos SOLOS (sin diálogo:
+//     el permiso del sistema ya estaba concedido)
+//   - primera vez en la vida de la app -> pedir permiso UNA sola vez
+async function intentarActivar(activar) {
+  if (await AsyncStorage.getItem(LLAVE_TOKEN_PUSH)) return; // ya activos
+  const quiere = await AsyncStorage.getItem(LLAVE_QUIERE);
+  if (quiere === 'no') return;
+  if (quiere === 'si') {
+    try { await activar(); } catch (e) { /* se reintenta en el próximo inicio */ }
+    return;
+  }
   const ya = await AsyncStorage.getItem(LLAVE_YA_INTENTADO);
   if (ya) return;
   await AsyncStorage.setItem(LLAVE_YA_INTENTADO, 'si');
   try {
-    await activarAvisos(tokenSesion);
+    await activar();
   } catch (e) {
     // Silencio: el usuario decide después desde Ajustes.
   }
+}
+
+// Intento silencioso del DUEÑO DEL CARRO al entrar.
+export async function intentarActivarUnaVez(tokenSesion) {
+  await intentarActivar(() => activarAvisos(tokenSesion));
+}
+
+// Intento silencioso del PERSONAL al entrar.
+export async function intentarActivarUnaVezTaller(jwt, tallerId) {
+  await intentarActivar(() => activarAvisosTaller(jwt, tallerId));
 }

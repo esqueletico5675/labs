@@ -159,9 +159,9 @@ export default function Vehiculo({ route }) {
             ✅ {mensajeKm}
           </Text>
         ) : !reportandoKm ? (
-          <Pressable onPress={() => setReportandoKm(true)} style={{ minHeight: 44, justifyContent: 'center' }}>
-            <Text style={estilos.enlaceKm}>🔢 Actualizar mi kilometraje</Text>
-          </Pressable>
+          <View style={{ width: '100%', marginTop: ESPACIO.m }}>
+            <Boton titulo="🔢 Actualizar mi kilometraje" onPress={() => setReportandoKm(true)} />
+          </View>
         ) : null}
 
         {reportandoKm && (
@@ -346,13 +346,6 @@ function crearEstilos(c) {
     kmNumero: {
       color: c.texto,
       fontWeight: '800',
-    },
-    enlaceKm: {
-      color: c.primario,
-      fontSize: LETRA.pequena,
-      fontWeight: '700',
-      textAlign: 'center',
-      marginTop: ESPACIO.s,
     },
     campoKm: {
       backgroundColor: c.fondo,

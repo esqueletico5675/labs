@@ -157,7 +157,12 @@ es la fuente confiable del km (lo registra en cada ingreso).
   `/portal/{token}/push-movil` (tabla `suscripciones_push` con
   `tipo="expo"`); `enviar_push_expo()` en `notificaciones.py` manda vía el
   servicio gratis de Expo y el envío diario elige canal según `tipo`;
-  prueba rápida con `probar_push_movil.py`. **Push en Android FUNCIONANDO
+  prueba rápida con `probar_push_movil.py`. La PREFERENCIA de avisos
+  persiste entre sesiones (`avisos_preferencia` en AsyncStorage): cerrar
+  sesión borra el registro en el backend pero al volver a entrar se
+  reactivan solos; solo "Apagar avisos" en Ajustes los deja apagados.
+  El dueño reporta su km con botón grande en la pantalla del vehículo
+  (endpoint POST `/portal/{token}/kilometraje`, también en el portal web). **Push en Android FUNCIONANDO
   (2026-07-17)** con development build de EAS: proyecto EAS
   `taller-diesel-movil` (cuenta esqueletico5675), paquete
   `com.tallerdiesel.movil`, keystore generada por EAS, Firebase del
