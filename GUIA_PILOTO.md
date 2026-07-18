@@ -135,9 +135,14 @@ son texto libre gratis.
 - **Recordatorios:** Render → **Cron Job** (o "Scheduled Job") →
   `python enviar_recordatorios.py`, todos los días a una hora decente
   (ej. 8:00 am Colombia = `0 13 * * *` en UTC).
-- **Backups:** Supabase gratis NO respalda solo. Opción simple: cron job
-  semanal con `pg_dump $DATABASE_URL > respaldo.sql` (o el plan pago).
-  En desarrollo local sigue siendo `python respaldar_bd.py`.
+- **Backups:** Supabase gratis NO respalda solo. `python respaldar_bd.py`
+  ya cubre los dos casos leyendo `DATABASE_URL`: sin ella respalda el SQLite
+  local; con la URL de Supabase respalda la base remota (usa `pg_dump` si
+  está instalado; si no, un plan B en Python exporta todos los datos a un
+  `.sql`). Programarlo en el PC del taller con el Programador de tareas de
+  Windows (diario, igual que los recordatorios), con `DATABASE_URL` en el
+  `.env`. Las copias quedan en `respaldos/` con rotación automática; cómo
+  restaurar está explicado al inicio de `respaldar_bd.py`.
 
 ## Paso 6 — Checklist de arranque con el taller
 

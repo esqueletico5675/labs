@@ -106,8 +106,14 @@ es la fuente confiable del km (lo registra en cada ingreso).
   envío diario (canal `whatsapp`/`whatsapp_simulado` en
   `recordatorios_enviados`). OJO producción: fuera de la ventana de 24 h Meta
   exige plantillas pre-aprobadas (pendiente al activar el piloto).
-- **Fase 5 (en curso):** HECHO: (a) **backups** — `respaldar_bd.py` usa la API
-  de respaldo de SQLite (segura con la BD en uso), copias fechadas en
+- **Fase 5 (en curso):** HECHO: (a) **backups** — `respaldar_bd.py` lee
+  `DATABASE_URL`: sin ella usa la API de respaldo de SQLite (segura con la BD
+  en uso); con URL de Supabase respalda la BD remota con `pg_dump` (formato
+  custom, `--no-owner --no-privileges`; lo busca en PATH y en
+  `C:\Program Files\PostgreSQL\*\bin`) y, si no está o falla, plan B en puro
+  Python: exporta datos a `.sql` con INSERTs vía `mogrify` de psycopg2, en
+  orden de FKs (`Base.metadata.sorted_tables`) + `setval` de secuencias
+  (restaurar: tablas con `migrar_bd.py`, luego `psql -f`). Copias fechadas en
   `respaldos/` (ignorada por git) con rotación (`RESPALDOS_MAXIMOS`, 30 por
   defecto); se programa como tarea diaria igual que `enviar_recordatorios.py`;
   (b) **endurecimiento** — con `ENTORNO=produccion` el servidor NO arranca sin
