@@ -74,7 +74,10 @@ def calcular_km_promedio_mensual(ingresos) -> float:
     km_recorridos = ultimo.kilometraje - primero.kilometraje
     meses = meses_entre(primero.fecha, ultimo.fecha)
 
-    if meses <= 0 or km_recorridos <= 0:
+    # Con menos de medio mes de historial el promedio sale distorsionado
+    # (ej. corregir el odómetro el mismo día parecería "70.000 km en un
+    # día"): en ese caso seguimos con el valor por defecto.
+    if meses < 0.5 or km_recorridos <= 0:
         return KM_PROMEDIO_MENSUAL_POR_DEFECTO
     return km_recorridos / meses
 
@@ -99,6 +102,16 @@ def revisar_mantenimientos(vehiculo, tipos, ultimos_realizados, ingresos, hoy=No
     km_mensual = calcular_km_promedio_mensual(ingresos)
     km_estimado = estimar_km_actual(vehiculo, km_mensual, hoy)
 
+    # La PRIMERA lectura conocida del vehículo: el ingreso más antiguo.
+    # OJO: no sirve vehiculo.km_actual, porque ese se sobrescribe con cada
+    # ingreso — usarlo haría que todo lo "nunca hecho" pareciera al día
+    # justo después de actualizar el kilometraje.
+    if ingresos:
+        primero = min(ingresos, key=lambda i: i.fecha)
+        primera_fecha, primer_km = primero.fecha, primero.kilometraje
+    else:
+        primera_fecha, primer_km = vehiculo.fecha_km, vehiculo.km_actual
+
     resultados = []
     for tipo in tipos:
         # ¿Cuándo se hizo por última vez? Si nunca, usamos la primera lectura
@@ -106,7 +119,7 @@ def revisar_mantenimientos(vehiculo, tipos, ultimos_realizados, ingresos, hoy=No
         if tipo.id in ultimos_realizados:
             fecha_ult, km_ult = ultimos_realizados[tipo.id]
         else:
-            fecha_ult, km_ult = vehiculo.fecha_km, vehiculo.km_actual
+            fecha_ult, km_ult = primera_fecha, primer_km
 
         vencido = False
         motivo = []

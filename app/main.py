@@ -340,6 +340,16 @@ def crear_vehiculo(taller_id: int, datos: schemas.VehiculoCrear, db: Session = D
     datos.placa = placa
     vehiculo = models.Vehiculo(taller_id=taller_id, **datos.model_dump())
     db.add(vehiculo)
+    db.flush()  # asigna vehiculo.id sin cerrar la transacción todavía
+
+    # Guardamos la PRIMERA lectura como un ingreso: así el motor de
+    # recordatorios siempre sabe desde dónde arrancó el odómetro, aunque
+    # km_actual se sobrescriba en visitas futuras.
+    db.add(models.Ingreso(
+        vehiculo_id=vehiculo.id,
+        kilometraje=vehiculo.km_actual,
+        descripcion="Registro inicial del vehículo",
+    ))
     db.commit()
     db.refresh(vehiculo)
     return vehiculo
