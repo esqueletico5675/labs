@@ -42,6 +42,8 @@ for taller in talleres:
     print(f"  Avisos incluidos:            {resumen['avisos']}")
     print(f"  Clientes sin contacto:       {resumen['omitidos_sin_contacto']}")
     print(f"  Avisos omitidos (repetidos): {resumen['omitidos_ya_avisados']}")
+    for error in resumen.get("errores", []):
+        print(f"  ⚠ ERROR: {error}")
 
 print(f"\nListo: {total_correos} correo(s) en total.")
 db.close()

@@ -1,0 +1,42 @@
+# ============================================================
+#  Recordatorios diarios — GitHub Actions (gratis)
+# ============================================================
+# Todos los días a las 8:00 am de Colombia (13:00 UTC), GitHub corre
+# enviar_recordatorios.py contra la base de datos de Supabase y manda
+# los correos/push que toquen. También se puede disparar a mano desde
+# la pestaña Actions (botón "Run workflow") para probar.
+#
+# Los secretos se configuran UNA vez en:
+#   GitHub -> Settings -> Secrets and variables -> Actions -> New repository secret
+# Necesita: DATABASE_URL, SMTP_USUARIO, SMTP_CLAVE, VAPID_PUBLICA, VAPID_PRIVADA
+
+name: Recordatorios diarios
+
+on:
+  schedule:
+    - cron: "0 13 * * *" # 13:00 UTC = 8:00 am Colombia
+  workflow_dispatch: {} # permite correrlo a mano para probar
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Enviar recordatorios
+        run: python enviar_recordatorios.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SMTP_HOST: smtp.gmail.com
+          SMTP_USUARIO: ${{ secrets.SMTP_USUARIO }}
+          SMTP_CLAVE: ${{ secrets.SMTP_CLAVE }}
+          VAPID_PUBLICA: ${{ secrets.VAPID_PUBLICA }}
+          VAPID_PRIVADA: ${{ secrets.VAPID_PRIVADA }}
+          PORTAL_URL: https://taller-diesel.onrender.com
