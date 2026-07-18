@@ -478,12 +478,21 @@ def enviar_recordatorios_taller(db, taller) -> dict:
             canales.append("push")
         if modo_whatsapp:
             canales.append("whatsapp" if modo_whatsapp == "enviado" else "whatsapp_simulado")
+
+        # Si NINGÚN canal funcionó, NO dejamos constancia: así mañana se
+        # reintenta, en vez de callar el aviso 7 días por un envío fallido.
+        if not canales:
+            resumen["errores"].append(
+                f"{vehiculo.placa}: ningún canal pudo entregar el aviso; se reintentará"
+            )
+            continue
+
         for p in nuevos:
             db.add(models.RecordatorioEnviado(
                 vehiculo_id=vehiculo.id,
                 tipo_id=p["tipo_id"],
                 estado=p["estado"],
-                canal="+".join(canales) or "ninguno",
+                canal="+".join(canales),
             ))
         db.commit()
 
