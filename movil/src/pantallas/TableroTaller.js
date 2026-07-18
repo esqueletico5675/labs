@@ -11,6 +11,7 @@ import {
   Alert, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 import * as api from '../api';
+import { intentarActivarUnaVezTaller } from '../avisos';
 import { useTema } from '../apariencia';
 import { CajaError, Cargando, CirculoIcono, Placa, Tarjeta } from '../componentes';
 import { useSesion } from '../sesion';
@@ -44,6 +45,12 @@ export default function TableroTaller({ navigation }) {
       cargar();
     }, [])
   );
+
+  // Al entrar por primera vez, intentamos activar los avisos de citas
+  // (pide permiso una sola vez; siempre se puede cambiar en Ajustes).
+  useEffect(() => {
+    intentarActivarUnaVezTaller(sesion.jwt, sesion.tallerId);
+  }, []);
 
   // Botones de la cabecera: Citas y Ajustes.
   useEffect(() => {

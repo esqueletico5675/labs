@@ -126,6 +126,23 @@ function conJwt(jwt) {
   return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + jwt };
 }
 
+// --- Push del PERSONAL: este celular quiere enterarse de citas nuevas ---
+export function registrarPushTaller(jwt, tallerId, expoToken) {
+  return pedir(`/talleres/${tallerId}/push-movil`, {
+    method: 'POST',
+    headers: conJwt(jwt),
+    body: JSON.stringify({ expo_token: expoToken }),
+  });
+}
+
+export function eliminarPushTaller(jwt, tallerId, expoToken) {
+  return pedir(`/talleres/${tallerId}/push-movil`, {
+    method: 'DELETE',
+    headers: conJwt(jwt),
+    body: JSON.stringify({ expo_token: expoToken }),
+  });
+}
+
 // --- El tablero: vehículos con mantenimientos vencidos o próximos ---
 export function tableroTaller(jwt, tallerId) {
   return pedir(`/talleres/${tallerId}/recordatorios`, { headers: conJwt(jwt) });

@@ -150,6 +150,79 @@ def enviar_push_expo(db, suscripcion, titulo: str, cuerpo: str) -> bool:
 
 
 # ============================================================
+#  Avisos de CITAS (en los dos sentidos)
+#  Nunca lanzan error: si un aviso falla, la cita igual queda guardada.
+# ============================================================
+def notificar_cita_al_taller(db, cita):
+    """Cliente pidió cita -> push al celular del personal + correo al taller."""
+    from . import models  # import local para evitar dependencias circulares
+    try:
+        placa = cita.vehiculo.placa if cita.vehiculo else "?"
+        nombre = cita.cliente.nombre if cita.cliente else "Un cliente"
+        titulo = f"📅 Nueva cita: {placa}"
+        cuerpo = f"{nombre} pide cita para el {cita.fecha}."
+        if cita.nota:
+            cuerpo += f" Nota: {cita.nota}"
+
+        # Push a cada celular del personal de ESTE taller.
+        suscripciones = db.query(models.SuscripcionPushPersonal).join(
+            models.Usuario,
+            models.SuscripcionPushPersonal.usuario_id == models.Usuario.id,
+        ).filter(models.Usuario.taller_id == cita.taller_id).all()
+        for s in suscripciones:
+            enviar_push_expo(db, s, titulo, cuerpo)
+
+        # Y correo al buzón del taller (respaldo para quien no usa la app).
+        taller = db.get(models.Taller, cita.taller_id)
+        if taller and taller.email:
+            enviar_correo(
+                taller.email,
+                f"Nueva cita solicitada — {placa}",
+                f"{cuerpo}\n\nEntra al panel para confirmarla o proponer otra fecha.",
+            )
+    except Exception as e:
+        print(f"[citas] No se pudo avisar al taller: {e}")
+
+
+def notificar_cita_al_cliente(db, cita):
+    """El taller confirmó o canceló -> push + correo al dueño del carro."""
+    from . import models
+    try:
+        if cita.estado == "confirmada":
+            titulo = "✅ Cita confirmada"
+            cuerpo = f"Tu taller confirmó la cita del {cita.fecha}. ¡Te esperamos!"
+        elif cita.estado == "cancelada":
+            titulo = "❌ Cita cancelada"
+            cuerpo = (f"Tu cita del {cita.fecha} fue cancelada. "
+                      "Puedes pedir otra fecha desde la app.")
+        else:
+            return  # "atendida" no necesita aviso
+
+        cliente = cita.cliente
+        if not cliente:
+            return
+        placa = cita.vehiculo.placa if cita.vehiculo else "?"
+
+        suscripciones = db.query(models.SuscripcionPush).filter(
+            models.SuscripcionPush.cliente_id == cliente.id
+        ).all()
+        for s in suscripciones:
+            if (s.tipo or "web") == "expo":
+                enviar_push_expo(db, s, f"{titulo}: {placa}", cuerpo)
+            else:
+                enviar_push(db, s, f"{titulo}: {placa}", cuerpo)
+
+        if cliente.email:
+            enviar_correo(
+                cliente.email,
+                f"{titulo} — {placa}",
+                f"Hola {cliente.nombre},\n\n{cuerpo}",
+            )
+    except Exception as e:
+        print(f"[citas] No se pudo avisar al cliente: {e}")
+
+
+# ============================================================
 #  WhatsApp (Fase 4) — vía la API oficial de Meta (Cloud API)
 #
 #  Se configura con variables de entorno (nunca en el código):

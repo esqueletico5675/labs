@@ -7,7 +7,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTema } from '../apariencia';
-import { activarAvisos, avisosActivos, desactivarAvisos } from '../avisos';
+import {
+  activarAvisos, activarAvisosTaller, avisosActivos,
+  desactivarAvisos, desactivarAvisosTaller,
+} from '../avisos';
 import { Boton, Tarjeta } from '../componentes';
 import { useSesion } from '../sesion';
 import { ESPACIO, LETRA, RADIO } from '../tema';
@@ -38,11 +41,13 @@ export default function Ajustes({ route }) {
     setTrabajando(true);
     try {
       if (avisosOn) {
-        await desactivarAvisos(token);
+        if (esTaller) await desactivarAvisosTaller(sesion.jwt, sesion.tallerId);
+        else await desactivarAvisos(token);
         setAvisosOn(false);
         setMensajeAvisos('Avisos apagados en este celular.');
       } else {
-        await activarAvisos(token);
+        if (esTaller) await activarAvisosTaller(sesion.jwt, sesion.tallerId);
+        else await activarAvisos(token);
         setAvisosOn(true);
         setMensajeAvisos('¡Listo! Este celular recibirá los avisos. 🔔');
       }
@@ -100,14 +105,18 @@ export default function Ajustes({ route }) {
         </View>
       </Tarjeta>
 
-      {/* Los avisos push son del DUEÑO del carro; al personal no le aplican. */}
-      {!esTaller && (
-        <Tarjeta>
+      {/* Avisos push: al dueño le avisan mantenimientos y su cita; al
+          personal, las citas nuevas que pidan los clientes. */}
+      <Tarjeta>
           <Text style={estilos.etiqueta}>Avisos en tu celular</Text>
           <Text style={estilos.parrafo}>
-            {avisosOn
-              ? '🔔 Este celular recibe avisos cuando a tu carro le toca mantenimiento.'
-              : '🔕 Actívalos para que te avisemos aquí mismo cuando a tu carro le toque mantenimiento.'}
+            {esTaller
+              ? avisosOn
+                ? '🔔 Este celular avisa cuando un cliente pida una cita.'
+                : '🔕 Actívalos para enterarte aquí mismo cuando un cliente pida una cita.'
+              : avisosOn
+                ? '🔔 Este celular recibe avisos cuando a tu carro le toca mantenimiento.'
+                : '🔕 Actívalos para que te avisemos aquí mismo cuando a tu carro le toque mantenimiento.'}
           </Text>
           {mensajeAvisos && <Text style={estilos.notaAvisos}>{mensajeAvisos}</Text>}
           <View style={{ marginTop: ESPACIO.m }}>
@@ -119,8 +128,7 @@ export default function Ajustes({ route }) {
               deshabilitado={trabajando}
             />
           </View>
-        </Tarjeta>
-      )}
+      </Tarjeta>
 
       <Boton titulo="Cerrar sesión" tono="peligro" onPress={salir} />
 

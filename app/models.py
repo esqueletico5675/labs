@@ -185,6 +185,24 @@ class SuscripcionPush(Base):
     cliente = relationship("Cliente")
 
 
+class SuscripcionPushPersonal(Base):
+    """
+    Push del PERSONAL del taller (app móvil): la dirección de entrega del
+    celular de cada empleado/admin, para avisarle al taller cuando un
+    cliente pide una cita. Solo canal Expo (la app); el panel web no
+    registra push por ahora.
+    """
+    __tablename__ = "suscripciones_push_personal"
+
+    id = Column(Integer, primary_key=True, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    endpoint = Column(Text, unique=True, nullable=False)  # ExponentPushToken
+    tipo = Column(String, default="expo", nullable=False)
+    creado_en = Column(DateTime, default=ahora_utc)
+
+    usuario = relationship("Usuario")
+
+
 class Cita(Base):
     """
     MVP CLIENTE: una solicitud de cita. El dueño del carro la pide desde su

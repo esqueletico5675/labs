@@ -32,9 +32,9 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Activa los avisos: permiso -> push token -> registrarlo en FastAPI.
-// Devuelve el token si quedó activo; lanza Error con mensaje amable si no.
-export async function activarAvisos(tokenSesion) {
+// Pide permiso y obtiene el push token de ESTE celular (paso común a
+// clientes y personal). Lanza Error con mensaje amable si no se puede.
+async function obtenerExpoToken() {
   if (!Device.isDevice) {
     throw new Error('Los avisos solo funcionan en un celular real (no en emulador).');
   }
@@ -75,10 +75,49 @@ export async function activarAvisos(tokenSesion) {
     );
   }
 
-  const expoToken = respuesta.data;
+  return respuesta.data;
+}
+
+// Activa los avisos del DUEÑO DEL CARRO: token -> registrarlo en FastAPI.
+export async function activarAvisos(tokenSesion) {
+  const expoToken = await obtenerExpoToken();
   await api.registrarPushMovil(tokenSesion, expoToken); // se lo contamos a FastAPI
   await AsyncStorage.setItem(LLAVE_TOKEN_PUSH, expoToken);
   return expoToken;
+}
+
+// Activa los avisos del PERSONAL: le llegan las citas nuevas del taller.
+export async function activarAvisosTaller(jwt, tallerId) {
+  const expoToken = await obtenerExpoToken();
+  await api.registrarPushTaller(jwt, tallerId, expoToken);
+  await AsyncStorage.setItem(LLAVE_TOKEN_PUSH, expoToken);
+  return expoToken;
+}
+
+// Apaga los avisos del PERSONAL en este celular.
+export async function desactivarAvisosTaller(jwt, tallerId) {
+  const expoToken = await AsyncStorage.getItem(LLAVE_TOKEN_PUSH);
+  if (expoToken) {
+    try {
+      await api.eliminarPushTaller(jwt, tallerId, expoToken);
+    } catch (e) {
+      // Sin internet no pasa nada: Expo avisará "DeviceNotRegistered" y
+      // el backend lo limpiará solo.
+    }
+  }
+  await AsyncStorage.removeItem(LLAVE_TOKEN_PUSH);
+}
+
+// Intento silencioso para el PERSONAL al entrar (una sola vez).
+export async function intentarActivarUnaVezTaller(jwt, tallerId) {
+  const ya = await AsyncStorage.getItem(LLAVE_YA_INTENTADO);
+  if (ya) return;
+  await AsyncStorage.setItem(LLAVE_YA_INTENTADO, 'si');
+  try {
+    await activarAvisosTaller(jwt, tallerId);
+  } catch (e) {
+    // Silencio: se puede activar después desde Ajustes.
+  }
 }
 
 // Apaga los avisos de este celular (y avisa al backend para que lo borre).

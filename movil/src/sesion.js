@@ -10,7 +10,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useContext, useEffect, useState } from 'react';
 import * as api from './api';
-import { desactivarAvisos } from './avisos';
+import { desactivarAvisos, desactivarAvisosTaller } from './avisos';
 
 const LLAVE_SESION = 'sesion_guardada';
 const LLAVE_VIEJA = 'token_acceso'; // formato anterior (solo clientes)
@@ -85,15 +85,17 @@ export function ProveedorSesion({ children }) {
     });
   }
 
-  // Salir: borra la sesión y vuelve a la pantalla de entrar. Si era un
-  // cliente, también apaga los avisos push de este celular.
+  // Salir: borra la sesión y vuelve a la pantalla de entrar. También
+  // apaga los avisos push de este celular (del cliente o del personal).
   async function salir() {
-    if (sesion?.tipo === 'cliente') {
-      try {
+    try {
+      if (sesion?.tipo === 'cliente') {
         await desactivarAvisos(sesion.token);
-      } catch (e) {
-        // Sin internet no pasa nada: salimos igual.
+      } else if (sesion?.tipo === 'taller') {
+        await desactivarAvisosTaller(sesion.jwt, sesion.tallerId);
       }
+    } catch (e) {
+      // Sin internet no pasa nada: salimos igual.
     }
     await AsyncStorage.multiRemove([LLAVE_SESION, LLAVE_VIEJA]);
     setSesion(null);

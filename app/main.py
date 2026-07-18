@@ -778,6 +778,9 @@ def pedir_cita(token_acceso: str, datos: schemas.CitaCrear,
     )
     db.add(cita)
     db.commit()
+    db.refresh(cita)
+    # Avisamos al personal (push + correo). Si falla, la cita igual quedó.
+    notificaciones.notificar_cita_al_taller(db, cita)
     return {"mensaje": f"Cita solicitada para el {datos.fecha}. El taller te confirmará."}
 
 
@@ -893,7 +896,46 @@ def cambiar_estado_cita(taller_id: int, cita_id: int, datos: schemas.CitaEstado,
     cita = buscar_en_taller(db, models.Cita, taller_id, cita_id)
     cita.estado = datos.estado
     db.commit()
+    db.refresh(cita)
+    # Avisamos al dueño del carro (push + correo). Si falla, el cambio quedó.
+    notificaciones.notificar_cita_al_cliente(db, cita)
     return {"mensaje": f"Cita marcada como {datos.estado}"}
+
+
+@app.post("/talleres/{taller_id}/push-movil")
+def activar_push_personal(taller_id: int, datos: schemas.PushMovil,
+                          db: Session = Depends(get_db),
+                          usuario: models.Usuario = Depends(usuario_del_taller)):
+    """
+    APP MÓVIL (modo taller): el celular de un empleado/admin registra su
+    push token de Expo para enterarse cuando un cliente pida una cita.
+    """
+    existente = db.query(models.SuscripcionPushPersonal).filter(
+        models.SuscripcionPushPersonal.endpoint == datos.expo_token
+    ).first()
+    if existente:
+        existente.usuario_id = usuario.id  # el celular cambió de dueño
+    else:
+        db.add(models.SuscripcionPushPersonal(
+            usuario_id=usuario.id,
+            endpoint=datos.expo_token,
+            tipo="expo",
+        ))
+    db.commit()
+    return {"mensaje": "Este celular recibirá las citas nuevas del taller"}
+
+
+@app.delete("/talleres/{taller_id}/push-movil")
+def desactivar_push_personal(taller_id: int, datos: schemas.PushMovil,
+                             db: Session = Depends(get_db),
+                             usuario: models.Usuario = Depends(usuario_del_taller)):
+    """APP MÓVIL (modo taller): apagar los avisos de citas en este celular."""
+    db.query(models.SuscripcionPushPersonal).filter(
+        models.SuscripcionPushPersonal.usuario_id == usuario.id,
+        models.SuscripcionPushPersonal.endpoint == datos.expo_token,
+    ).delete()
+    db.commit()
+    return {"mensaje": "Avisos de citas desactivados en este celular"}
 
 
 @app.post("/portal/{token_acceso}/push")
