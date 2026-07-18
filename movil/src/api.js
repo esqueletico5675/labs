@@ -4,11 +4,13 @@
 // Todas las pantallas piden datos AQUÍ; ninguna llama a fetch por su
 // cuenta. Si mañana cambia una URL, se cambia en un solo lugar.
 
-// ⚠️ CAMBIA ESTA IP si tu PC cambia de red. Es la IP local del PC donde
-// corre `uvicorn app.main:app --reload --host 0.0.0.0`.
-// El celular debe estar en el MISMO WiFi. Cuando el backend esté en
-// Render, aquí irá la URL pública (https://...).
-export const URL_BASE = 'http://192.168.1.9:8000';
+// Backend en producción (Render). El plan gratis se duerme tras 15 min
+// sin uso: la primera petición puede tardar ~30 s en responder.
+// Para desarrollar contra el PC local, comenta la línea de Render y
+// descomenta la de la IP local (celular en el MISMO WiFi, uvicorn con
+// `--host 0.0.0.0`; cambia la IP si tu PC cambia de red).
+export const URL_BASE = 'https://taller-diesel.onrender.com';
+// export const URL_BASE = 'http://192.168.1.9:8000';
 
 // Ayudante interno: hace la petición, y si algo sale mal lanza un
 // Error con un mensaje que un cliente pueda entender.
