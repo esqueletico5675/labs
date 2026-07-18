@@ -71,6 +71,14 @@ export function pedirCita(token, vehiculoId, fecha, nota) {
   });
 }
 
+// --- El dueño reporta el km de su odómetro (afina la estimación) ---
+export function reportarKilometraje(token, vehiculoId, kilometraje) {
+  return pedir(`/portal/${token}/kilometraje`, {
+    method: 'POST',
+    body: JSON.stringify({ vehiculo_id: vehiculoId, kilometraje }),
+  });
+}
+
 // --- Avisos push: registrar el token de ESTE celular en el backend ---
 export function registrarPushMovil(token, expoToken) {
   return pedir(`/portal/${token}/push-movil`, {

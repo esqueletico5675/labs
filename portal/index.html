@@ -416,6 +416,18 @@
             </div>
           </details>` : ""}
 
+          <!-- El dueño reporta el km real de su tablero (afina la estimación) -->
+          <details class="cita">
+            <summary>🔢 Actualizar mi kilometraje</summary>
+            <div class="cita-form">
+              <label>¿Cuántos km marca tu tablero?
+                <input type="number" inputmode="numeric" id="km-valor-${v.vehiculo_id}" placeholder="Ej: 82500" min="0">
+              </label>
+              <button onclick="reportarKm(${v.vehiculo_id})">Guardar kilometraje</button>
+              <p id="km-msj-${v.vehiculo_id}" style="font-size:.78rem;min-height:1em;"></p>
+            </div>
+          </details>
+
           <!-- MVP: pedir cita para ESTE vehículo -->
           <details class="cita">
             <summary>📅 Agendar cita para este vehículo</summary>
@@ -481,6 +493,22 @@
       msj.style.color = r.ok ? "#6ee7b7" : "#fca5a5";
       msj.textContent = r.ok ? datos.mensaje : (datos.detail || "No se pudo solicitar.");
       if (r.ok) cargarCitas();
+    }
+
+    async function reportarKm(vehiculoId) {
+      const valor = document.getElementById("km-valor-" + vehiculoId).value;
+      const msj = document.getElementById("km-msj-" + vehiculoId);
+      const km = parseInt(valor, 10);
+      if (isNaN(km)) { msj.style.color = "#fca5a5"; msj.textContent = "Escribe el número de tu odómetro."; return; }
+      const r = await fetch(`/portal/${encodeURIComponent(token)}/kilometraje`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vehiculo_id: vehiculoId, kilometraje: km }),
+      });
+      const datos = await r.json();
+      msj.style.color = r.ok ? "#6ee7b7" : "#fca5a5";
+      msj.textContent = r.ok ? datos.mensaje : (datos.detail || "No se pudo guardar.");
+      if (r.ok) setTimeout(cargar, 1200); // recarga: el odómetro y los medidores se actualizan
     }
 
     async function crearClave() {

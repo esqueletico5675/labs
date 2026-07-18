@@ -174,6 +174,12 @@ class CitaCrear(BaseModel):
     nota: Optional[str] = None
 
 
+class KilometrajeReportado(BaseModel):
+    """El dueño del carro reporta cuántos km marca su odómetro hoy."""
+    vehiculo_id: int
+    kilometraje: int = Field(ge=0)
+
+
 class CitaEstado(BaseModel):
     """El taller mueve la cita de estado desde el panel."""
     estado: Literal["solicitada", "confirmada", "atendida", "cancelada"]

@@ -781,6 +781,44 @@ def pedir_cita(token_acceso: str, datos: schemas.CitaCrear,
     return {"mensaje": f"Cita solicitada para el {datos.fecha}. El taller te confirmará."}
 
 
+@app.post("/portal/{token_acceso}/kilometraje")
+def reportar_kilometraje(token_acceso: str, datos: schemas.KilometrajeReportado,
+                         db: Session = Depends(get_db)):
+    """
+    El dueño reporta el km que marca su odómetro HOY. Afina la estimación
+    entre visitas (el taller sigue siendo la fuente en cada ingreso).
+    Se guarda como un ingreso etiquetado, así alimenta el promedio km/mes.
+    """
+    cliente = cliente_por_token(db, token_acceso)
+    vehiculo = db.get(models.Vehiculo, datos.vehiculo_id)
+    if not vehiculo or vehiculo.cliente_id != cliente.id:
+        raise HTTPException(status_code=404, detail="Ese vehículo no es tuyo")
+
+    # El odómetro no rueda hacia atrás (mismo criterio que el taller).
+    if datos.kilometraje < vehiculo.km_actual:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Ese kilometraje ({datos.kilometraje:,}) es menor al último "
+                   f"registrado ({vehiculo.km_actual:,}). Revisa el número.",
+        )
+    # Salto imposible = casi seguro un dígito de más.
+    if datos.kilometraje > vehiculo.km_actual + 150000:
+        raise HTTPException(
+            status_code=422,
+            detail="Ese salto de kilometraje parece un error de digitación. Revisa el número.",
+        )
+
+    db.add(models.Ingreso(
+        vehiculo_id=vehiculo.id,
+        kilometraje=datos.kilometraje,
+        descripcion="Kilometraje reportado por el dueño",
+    ))
+    vehiculo.km_actual = datos.kilometraje
+    vehiculo.fecha_km = ahora_utc()
+    db.commit()
+    return {"mensaje": f"Listo, guardamos {datos.kilometraje:,} km. ¡Gracias por avisarnos!"}
+
+
 @app.get("/portal/{token_acceso}")
 def datos_portal(token_acceso: str, db: Session = Depends(get_db)):
     """

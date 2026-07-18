@@ -35,6 +35,14 @@ export default function Vehiculo({ route }) {
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
+  // Reportar el kilometraje del odómetro (el dueño ayuda a afinar).
+  const [reportandoKm, setReportandoKm] = useState(false);
+  const [kmTexto, setKmTexto] = useState('');
+  const [kmReportado, setKmReportado] = useState(null); // el último que guardó
+  const [mensajeKm, setMensajeKm] = useState(null);
+  const [errorKm, setErrorKm] = useState(null);
+  const [guardandoKm, setGuardandoKm] = useState(false);
+
   // Al entrar, averiguamos si ya hay una cita pendiente para este carro.
   useEffect(() => {
     api
@@ -54,7 +62,25 @@ export default function Vehiculo({ route }) {
     (a, b) => (ESTADOS[a.estado]?.orden ?? 9) - (ESTADOS[b.estado]?.orden ?? 9)
   );
 
-  const kmEstimado = mantenimientos[0]?.km_estimado ?? vehiculo.km_registrado;
+  const kmEstimado = kmReportado ?? (mantenimientos[0]?.km_estimado ?? vehiculo.km_registrado);
+
+  async function guardarKm() {
+    setErrorKm(null);
+    const km = parseInt(kmTexto.replace(/[.,\s]/g, ''), 10); // acepta "80.000"
+    if (isNaN(km)) return setErrorKm('Escribe el número que marca tu odómetro.');
+    setGuardandoKm(true);
+    try {
+      const r = await api.reportarKilometraje(token, vehiculo.vehiculo_id, km);
+      setMensajeKm(r.mensaje);
+      setKmReportado(km);
+      setReportandoKm(false);
+      setKmTexto('');
+    } catch (e) {
+      setErrorKm(e.message);
+    } finally {
+      setGuardandoKm(false);
+    }
+  }
 
   async function confirmarCita() {
     setError(null);
@@ -86,8 +112,43 @@ export default function Vehiculo({ route }) {
         {kmEstimado != null && (
           <View style={estilos.cajitaKm}>
             <Text style={estilos.km}>
-              Va por unos <Text style={estilos.kmNumero}>{formatearKm(kmEstimado)} km</Text> (estimado)
+              Va por unos <Text style={estilos.kmNumero}>{formatearKm(kmEstimado)} km</Text>
+              {kmReportado != null ? ' (tu lectura)' : ' (estimado)'}
             </Text>
+          </View>
+        )}
+
+        {/* El dueño corrige la estimación con el número real del tablero. */}
+        {mensajeKm ? (
+          <Text style={[estilos.km, { color: colores.alDia, marginTop: ESPACIO.s, fontWeight: '700' }]}>
+            ✅ {mensajeKm}
+          </Text>
+        ) : !reportandoKm ? (
+          <Pressable onPress={() => setReportandoKm(true)} style={{ minHeight: 44, justifyContent: 'center' }}>
+            <Text style={estilos.enlaceKm}>🔢 Actualizar mi kilometraje</Text>
+          </Pressable>
+        ) : null}
+
+        {reportandoKm && (
+          <View style={{ width: '100%', marginTop: ESPACIO.m }}>
+            <Text style={estilos.pregunta}>¿Cuántos km marca tu tablero?</Text>
+            <TextInput
+              style={estilos.campoKm}
+              value={kmTexto}
+              onChangeText={setKmTexto}
+              placeholder="Ej.: 82500"
+              placeholderTextColor={colores.textoSuave}
+              keyboardType="number-pad"
+            />
+            <CajaError mensaje={errorKm} />
+            <Boton
+              titulo={guardandoKm ? 'Guardando…' : 'Guardar kilometraje'}
+              onPress={guardarKm}
+              deshabilitado={guardandoKm}
+            />
+            <Pressable onPress={() => setReportandoKm(false)} style={{ marginTop: ESPACIO.s, minHeight: 44, justifyContent: 'center' }}>
+              <Text style={estilos.cancelar}>Cancelar</Text>
+            </Pressable>
           </View>
         )}
       </Tarjeta>
@@ -243,6 +304,26 @@ function crearEstilos(c) {
     kmNumero: {
       color: c.texto,
       fontWeight: '800',
+    },
+    enlaceKm: {
+      color: c.primario,
+      fontSize: LETRA.pequena,
+      fontWeight: '700',
+      textAlign: 'center',
+      marginTop: ESPACIO.s,
+    },
+    campoKm: {
+      backgroundColor: c.fondo,
+      borderWidth: 1,
+      borderColor: c.borde,
+      borderRadius: RADIO.campo,
+      color: c.texto,
+      fontSize: LETRA.subtitulo,
+      fontWeight: '700',
+      padding: ESPACIO.m,
+      marginBottom: ESPACIO.m,
+      minHeight: 52,
+      textAlign: 'center',
     },
     seccion: {
       color: c.textoSuave,
