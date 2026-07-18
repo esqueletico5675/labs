@@ -318,7 +318,9 @@ def enviar_correo(destinatario: str, asunto: str, cuerpo: str) -> str:
     mensaje.set_content(cuerpo)
 
     # starttls() = la conexión se cifra antes de mandar usuario y clave.
-    with smtplib.SMTP(host, puerto) as servidor:
+    # timeout: si el servidor de correo no responde en 20 s, error claro
+    # en vez de dejar la petición colgada para siempre.
+    with smtplib.SMTP(host, puerto, timeout=20) as servidor:
         servidor.starttls()
         if usuario:
             servidor.login(usuario, clave)
@@ -387,6 +389,7 @@ def enviar_recordatorios_taller(db, taller) -> dict:
         "avisos": 0,
         "omitidos_sin_contacto": 0,   # clientes sin correo, push NI teléfono
         "omitidos_ya_avisados": 0,    # avisos repetidos que evitamos
+        "errores": [],                # envíos que fallaron (y por qué)
         "detalle": [],
     }
 
@@ -429,8 +432,13 @@ def enviar_recordatorios_taller(db, taller) -> dict:
         modo = None
         if cliente.email:
             asunto, cuerpo = redactar_correo(taller.nombre, cliente, vehiculo, nuevos)
-            modo = enviar_correo(cliente.email, asunto, cuerpo)
-            resumen["correos"] += 1
+            # Si el correo de UN cliente falla (SMTP caído, clave mala…),
+            # lo anotamos y seguimos con los demás: un fallo no frena el resto.
+            try:
+                modo = enviar_correo(cliente.email, asunto, cuerpo)
+                resumen["correos"] += 1
+            except Exception as e:
+                resumen["errores"].append(f"{vehiculo.placa} ({cliente.email}): {e}")
 
         # Y la notificación push a cada dispositivo del cliente (texto corto).
         push_entregados = 0
