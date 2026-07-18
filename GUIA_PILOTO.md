@@ -55,15 +55,15 @@ resumen dice cuántos correos salieron.
 
 1. Sube el proyecto a GitHub (sin `taller.db`, `venv/` ni `llaves_push.json`
    — el `.gitignore` ya los excluye).
-2. En https://render.com → New → **Web Service** → conecta el repositorio.
-   - Build command: `pip install -r requirements.txt psycopg2-binary`
-   - Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-3. En **Environment** agrega las variables:
+2. En https://render.com → New → **Blueprint** → conecta el repositorio.
+   El archivo `render.yaml` del repo ya trae toda la configuración
+   (build, start, plan gratis); Render solo te preguntará los secretos.
+3. Variables que Render pedirá en pantalla (las demás vienen del Blueprint):
 
    | Variable | Valor |
    |---|---|
-   | `ENTORNO` | `produccion` |
-   | `JWT_SECRETO` | genera una: `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
+   | `ENTORNO` | `produccion` (ya viene en el Blueprint) |
+   | `JWT_SECRETO` | Render la genera sola (Blueprint) |
    | `DATABASE_URL` | la URI del pooler de Supabase (paso 1) |
    | `PORTAL_URL` | la URL que Render te dé, ej. `https://taller-diesel.onrender.com` |
    | `SMTP_HOST` / `SMTP_USUARIO` / `SMTP_CLAVE` | las del paso 2 |

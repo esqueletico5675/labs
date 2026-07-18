@@ -1,0 +1,43 @@
+# ============================================================
+#  render.yaml — "Blueprint" de Render
+# ============================================================
+# Render lee este archivo del repositorio y crea el servicio ya
+# configurado (New -> Blueprint -> elegir este repo). Así no hay que
+# llenar el formulario a mano y la configuración queda versionada.
+#
+# Los valores con "sync: false" son SECRETOS: Render los pregunta en
+# el navegador al crear el servicio (nunca van en el repositorio).
+
+services:
+  - type: web
+    name: taller-diesel
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: ENTORNO
+        value: produccion
+      # Render genera un secreto aleatorio fuerte automáticamente.
+      - key: JWT_SECRETO
+        generateValue: true
+      # URI del "Session pooler" de Supabase (con la contraseña adentro).
+      - key: DATABASE_URL
+        sync: false
+      # La URL pública que Render asigne, ej. https://taller-diesel.onrender.com
+      - key: PORTAL_URL
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_USUARIO
+        sync: false
+      # Contraseña de APLICACIÓN de Gmail (no la del correo).
+      - key: SMTP_CLAVE
+        sync: false
+      # Llaves de push web: python generar_llaves_push.py (correr local).
+      - key: VAPID_PUBLICA
+        sync: false
+      - key: VAPID_PRIVADA
+        sync: false
