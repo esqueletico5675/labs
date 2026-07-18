@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Pressable, ScrollView, StyleSheet, Text, TextInput, View,
+  Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import * as api from '../api';
 import { useTema } from '../apariencia';
@@ -90,12 +90,47 @@ export default function Vehiculo({ route }) {
       const r = await api.pedirCita(token, vehiculo.vehiculo_id, fecha, nota || null);
       setMensaje(r.mensaje);
       setPidiendoCita(false);
-      setCitaPendiente({ fecha, estado: 'solicitada' });
+      // Volvemos a preguntar por las citas: así conocemos el id de la nueva
+      // (sin el id no se podría cancelar después).
+      try {
+        const citas = await api.misCitas(token);
+        setCitaPendiente(
+          citas.find(
+            (c) => c.placa === vehiculo.placa && ['solicitada', 'confirmada'].includes(c.estado)
+          ) || { fecha, estado: 'solicitada' }
+        );
+      } catch {
+        setCitaPendiente({ fecha, estado: 'solicitada' });
+      }
     } catch (e) {
       setError(e.message);
     } finally {
       setEnviando(false);
     }
+  }
+
+  function cancelarCita() {
+    if (!citaPendiente?.id) return;
+    // Alert nativo: pregunta antes de cancelar, para evitar toques por error.
+    Alert.alert('Cancelar cita', '¿Seguro? El taller quedará avisado.', [
+      { text: 'No, dejarla' },
+      {
+        text: 'Sí, cancelar',
+        style: 'destructive',
+        onPress: async () => {
+          setEnviando(true);
+          try {
+            await api.cancelarMiCita(token, citaPendiente.id);
+            setCitaPendiente(null);
+            setMensaje(null);
+          } catch (e) {
+            setError(e.message);
+          } finally {
+            setEnviando(false);
+          }
+        },
+      },
+    ]);
   }
 
   return (
@@ -197,6 +232,13 @@ export default function Vehiculo({ route }) {
 
       {!citaPendiente && !mensaje && !pidiendoCita && (
         <Boton titulo="📅  Pedir cita" onPress={() => setPidiendoCita(true)} />
+      )}
+
+      {/* Si hay cita viva (y sabemos su id), el dueño puede cancelarla. */}
+      {citaPendiente?.id && !pidiendoCita && (
+        <Pressable onPress={cancelarCita} disabled={enviando} style={{ marginTop: ESPACIO.s }}>
+          <Text style={estilos.cancelar}>❌ Cancelar esta cita</Text>
+        </Pressable>
       )}
 
       {pidiendoCita && (

@@ -131,7 +131,11 @@ es la fuente confiable del km (lo registra en cada ingreso).
   (b) **citas**: tabla `citas` (solicitada→confirmada→atendida/cancelada),
   el cliente pide fecha+nota por vehículo desde el portal (máx. 1 pendiente
   por vehículo), y el taller las gestiona en la sección "Citas" del panel
-  (`GET/PATCH /talleres/{id}/citas`). La supresión Habeas Data también
+  (`GET/PATCH /talleres/{id}/citas`). **Avisos en ambos sentidos:** pedir
+  cita avisa al personal (push móvil + correo del taller); confirmar,
+  cancelar o marcar atendida avisa al cliente (push + correo). El cliente
+  también puede CANCELAR su cita (DELETE `/portal/{token}/citas/{id}`,
+  botón en portal y app móvil) y eso avisa al personal. La supresión Habeas Data también
   apaga el login del cliente.
 - **APP MÓVIL (en curso, 2026-07):** app NATIVA con **React Native + Expo**
   en `movil/` (reemplaza la decisión vieja de "solo PWA" para el cliente).

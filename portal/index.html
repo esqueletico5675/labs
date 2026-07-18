@@ -475,8 +475,24 @@
       if (!citas.length) return;
       document.getElementById("zona-citas").style.display = "";
       document.getElementById("lista-citas").innerHTML = citas.map(c =>
-        `<div><b>${c.fecha}</b> · ${c.placa} · ${ETIQUETA_CITA[c.estado] || c.estado}${c.nota ? " · " + c.nota : ""}</div>`
+        `<div><b>${c.fecha}</b> · ${c.placa} · ${ETIQUETA_CITA[c.estado] || c.estado}${c.nota ? " · " + c.nota : ""}` +
+        (["solicitada", "confirmada"].includes(c.estado)
+          ? ` · <a href="#" onclick="cancelarCita(${c.id});return false;" style="color:#ef4444;">Cancelar</a>`
+          : "") +
+        `</div>`
       ).join("");
+    }
+
+    async function cancelarCita(citaId) {
+      if (!confirm("¿Cancelar esta cita? El taller quedará avisado.")) return;
+      const r = await fetch(`/portal/${encodeURIComponent(token)}/citas/${citaId}`, {
+        method: "DELETE",
+      });
+      if (r.ok) { cargarCitas(); cargar(); } // refresca citas y vehículos
+      else {
+        const datos = await r.json().catch(() => ({}));
+        alert(datos.detail || "No se pudo cancelar la cita.");
+      }
     }
 
     async function pedirCita(vehiculoId) {

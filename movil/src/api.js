@@ -71,6 +71,11 @@ export function pedirCita(token, vehiculoId, fecha, nota) {
   });
 }
 
+// --- Cancelar MI cita (el taller recibe el aviso) ---
+export function cancelarMiCita(token, citaId) {
+  return pedir(`/portal/${token}/citas/${citaId}`, { method: 'DELETE' });
+}
+
 // --- El dueño reporta el km de su odómetro (afina la estimación) ---
 export function reportarKilometraje(token, vehiculoId, kilometraje) {
   return pedir(`/portal/${token}/kilometraje`, {

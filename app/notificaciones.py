@@ -153,35 +153,54 @@ def enviar_push_expo(db, suscripcion, titulo: str, cuerpo: str) -> bool:
 #  Avisos de CITAS (en los dos sentidos)
 #  Nunca lanzan error: si un aviso falla, la cita igual queda guardada.
 # ============================================================
+def _avisar_al_personal(db, taller_id, titulo, cuerpo, asunto_correo, cuerpo_correo):
+    """Push a cada celular del personal del taller + correo al buzón del taller."""
+    from . import models  # import local para evitar dependencias circulares
+    suscripciones = db.query(models.SuscripcionPushPersonal).join(
+        models.Usuario,
+        models.SuscripcionPushPersonal.usuario_id == models.Usuario.id,
+    ).filter(models.Usuario.taller_id == taller_id).all()
+    for s in suscripciones:
+        enviar_push_expo(db, s, titulo, cuerpo)
+
+    # Correo al buzón del taller (respaldo para quien no usa la app).
+    taller = db.get(models.Taller, taller_id)
+    if taller and taller.email:
+        enviar_correo(taller.email, asunto_correo, cuerpo_correo)
+
+
 def notificar_cita_al_taller(db, cita):
     """Cliente pidió cita -> push al celular del personal + correo al taller."""
-    from . import models  # import local para evitar dependencias circulares
     try:
         placa = cita.vehiculo.placa if cita.vehiculo else "?"
         nombre = cita.cliente.nombre if cita.cliente else "Un cliente"
-        titulo = f"📅 Nueva cita: {placa}"
         cuerpo = f"{nombre} pide cita para el {cita.fecha}."
         if cita.nota:
             cuerpo += f" Nota: {cita.nota}"
-
-        # Push a cada celular del personal de ESTE taller.
-        suscripciones = db.query(models.SuscripcionPushPersonal).join(
-            models.Usuario,
-            models.SuscripcionPushPersonal.usuario_id == models.Usuario.id,
-        ).filter(models.Usuario.taller_id == cita.taller_id).all()
-        for s in suscripciones:
-            enviar_push_expo(db, s, titulo, cuerpo)
-
-        # Y correo al buzón del taller (respaldo para quien no usa la app).
-        taller = db.get(models.Taller, cita.taller_id)
-        if taller and taller.email:
-            enviar_correo(
-                taller.email,
-                f"Nueva cita solicitada — {placa}",
-                f"{cuerpo}\n\nEntra al panel para confirmarla o proponer otra fecha.",
-            )
+        _avisar_al_personal(
+            db, cita.taller_id,
+            f"📅 Nueva cita: {placa}", cuerpo,
+            f"Nueva cita solicitada — {placa}",
+            f"{cuerpo}\n\nEntra al panel para confirmarla o proponer otra fecha.",
+        )
     except Exception as e:
         print(f"[citas] No se pudo avisar al taller: {e}")
+
+
+def notificar_cancelacion_al_taller(db, cita):
+    """El CLIENTE canceló su cita -> avisar al personal para liberar el cupo."""
+    try:
+        placa = cita.vehiculo.placa if cita.vehiculo else "?"
+        nombre = cita.cliente.nombre if cita.cliente else "Un cliente"
+        cuerpo = f"{nombre} canceló la cita del {cita.fecha}."
+        _avisar_al_personal(
+            db, cita.taller_id,
+            f"❌ Cita cancelada: {placa}", cuerpo,
+            f"Cita cancelada por el cliente — {placa}",
+            f"{cuerpo}\n\nEl espacio queda libre en la agenda.",
+        )
+    except Exception as e:
+        print(f"[citas] No se pudo avisar la cancelación al taller: {e}")
 
 
 def notificar_cita_al_cliente(db, cita):
@@ -195,8 +214,12 @@ def notificar_cita_al_cliente(db, cita):
             titulo = "❌ Cita cancelada"
             cuerpo = (f"Tu cita del {cita.fecha} fue cancelada. "
                       "Puedes pedir otra fecha desde la app.")
+        elif cita.estado == "atendida":
+            titulo = "🔧 Visita registrada"
+            cuerpo = (f"Gracias por tu visita del {cita.fecha}. "
+                      "Tu historial de mantenimiento ya quedó actualizado en la app.")
         else:
-            return  # "atendida" no necesita aviso
+            return  # "solicitada" u otros estados no llevan aviso al cliente
 
         cliente = cita.cliente
         if not cliente:

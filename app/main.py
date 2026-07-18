@@ -784,6 +784,30 @@ def pedir_cita(token_acceso: str, datos: schemas.CitaCrear,
     return {"mensaje": f"Cita solicitada para el {datos.fecha}. El taller te confirmará."}
 
 
+@app.delete("/portal/{token_acceso}/citas/{cita_id}")
+def cancelar_cita_cliente(token_acceso: str, cita_id: int,
+                          db: Session = Depends(get_db)):
+    """
+    El dueño cancela SU cita (solicitada o confirmada). El personal recibe
+    push + correo para que sepa que el espacio quedó libre.
+    """
+    cliente = cliente_por_token(db, token_acceso)
+    cita = db.get(models.Cita, cita_id)
+    if not cita or cita.cliente_id != cliente.id:
+        raise HTTPException(status_code=404, detail="Esa cita no es tuya")
+    if cita.estado not in ("solicitada", "confirmada"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"La cita ya está {cita.estado}; no se puede cancelar.",
+        )
+
+    cita.estado = "cancelada"
+    db.commit()
+    db.refresh(cita)
+    notificaciones.notificar_cancelacion_al_taller(db, cita)
+    return {"mensaje": "Cita cancelada. Puedes pedir otra cuando quieras."}
+
+
 @app.post("/portal/{token_acceso}/kilometraje")
 def reportar_kilometraje(token_acceso: str, datos: schemas.KilometrajeReportado,
                          db: Session = Depends(get_db)):
