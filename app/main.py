@@ -26,7 +26,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from . import models, schemas, security, mantenimiento, notificaciones
+from . import models, schemas, security, mantenimiento, notificaciones, limitador
 from .database import engine, get_db
 from .utilidades import ahora_utc, token_portal
 
@@ -38,6 +38,10 @@ app = FastAPI(
     description="Backend de la Fase 1: talleres, vehículos, ingresos y recordatorios.",
     version="0.1.0",
 )
+
+# Freno contra abusos: corta a quien haga demasiadas peticiones por minuto
+# (por IP). Ver app/limitador.py. Se ajusta con RATE_LIMIT_POR_MINUTO.
+app.middleware("http")(limitador.limitar_peticiones)
 
 
 @app.get("/")
