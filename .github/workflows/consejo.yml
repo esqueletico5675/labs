@@ -1,0 +1,39 @@
+# ============================================================
+#  Consejo del día — GitHub Actions (gratis)
+# ============================================================
+# Una vez al día, a las 10:00 am de Colombia (15:00 UTC), GitHub manda un
+# dato curioso de mantenimiento ("¿Sabías que…?") por notificación push a
+# los clientes que activaron los avisos. También se puede disparar a mano
+# desde la pestaña Actions ("Run workflow") para probar.
+#
+# Usa los mismos secretos que los recordatorios diarios. El push de la app
+# (Expo) no necesita ninguna llave; VAPID_* solo hace falta para el push
+# web (PWA). Se configuran en:
+#   GitHub -> Settings -> Secrets and variables -> Actions
+
+name: Consejo del día
+
+on:
+  schedule:
+    - cron: "0 15 * * *" # 15:00 UTC = 10:00 am Colombia
+  workflow_dispatch: {} # permite correrlo a mano para probar
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Enviar consejo del día
+        run: python enviar_consejo.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          VAPID_PUBLICA: ${{ secrets.VAPID_PUBLICA }}
+          VAPID_PRIVADA: ${{ secrets.VAPID_PRIVADA }}

@@ -604,3 +604,45 @@ def enviar_recordatorios_taller(db, taller) -> dict:
         })
 
     return resumen
+
+
+# ============================================================
+#  CONSEJO DEL DÍA — un dato curioso por notificación push
+#
+#  A diferencia de los recordatorios (que dependen del estado de cada
+#  carro), este es el MISMO dato para todos, una vez al día. Va solo por
+#  PUSH (no correo: sería demasiado ruido en el buzón) y solo a quien
+#  activó los avisos. La frecuencia (una vez al día) la decide el cron que
+#  llama a este envío; aquí solo mandamos.
+# ============================================================
+def enviar_consejo_del_dia(db) -> dict:
+    """
+    Manda el 'dato curioso' del día por push a cada dispositivo de cliente
+    suscrito. Devuelve un resumen. Nunca lanza error por un dispositivo
+    dañado: el proceso del día no se debe caer por uno solo.
+    """
+    from . import consejos  # import local: la lista de datos curiosos
+
+    texto = consejos.consejo_del_dia()
+    titulo = "💡 ¿Sabías que…?"
+    cuerpo = f"{texto.capitalize()} Consulta con tu taller."
+
+    resumen = {"push": 0, "dispositivos": 0, "consejo": texto}
+
+    # Solo dispositivos de clientes ACTIVOS (con enlace vigente): si el
+    # cliente pidió supresión de datos (token_acceso = None), no le
+    # escribimos. La suscripción existe = el cliente activó los avisos.
+    suscripciones = db.query(models.SuscripcionPush).join(
+        models.Cliente, models.SuscripcionPush.cliente_id == models.Cliente.id
+    ).filter(models.Cliente.token_acceso.isnot(None)).all()
+
+    for s in suscripciones:
+        resumen["dispositivos"] += 1
+        if (s.tipo or "web") == "expo":
+            entregado = enviar_push_expo(db, s, titulo, cuerpo)
+        else:
+            entregado = enviar_push(db, s, titulo, cuerpo)
+        if entregado:
+            resumen["push"] += 1
+
+    return resumen
