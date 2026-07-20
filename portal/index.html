@@ -261,6 +261,21 @@
       return partes.length ? "faltan " + partes.join(" o ") : "";
     }
 
+    // Escapa texto antes de meterlo en innerHTML. Los datos que muestra el
+    // portal (placa, marca, modelo, nombre del mantenimiento, descripción de
+    // la visita, nota de la cita) los escribe el taller o el propio cliente:
+    // sin escapar, un valor con <etiquetas> o comillas podría inyectar HTML
+    // o JavaScript (XSS). Escapamos < > & y las comillas para que sea seguro
+    // tanto como texto visible como dentro de un atributo.
+    function esc(texto) {
+      return String(texto == null ? "" : texto)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
     function pedirToken(mensaje) {
       contenido.innerHTML = `
         <div class="aviso">
@@ -387,8 +402,8 @@
         return `
         <section class="cluster">
           <div class="cluster-cabeza">
-            <div class="modelo"><b>${[v.marca, v.modelo].filter(Boolean).join(" ") || "Vehículo"}</b>según tu taller</div>
-            <div class="placa">${v.placa}</div>
+            <div class="modelo"><b>${esc([v.marca, v.modelo].filter(Boolean).join(" ") || "Vehículo")}</b>según tu taller</div>
+            <div class="placa">${esc(v.placa)}</div>
           </div>
 
           <div class="odometro">
@@ -400,8 +415,8 @@
             ${v.mantenimientos.map(m => `
               <div class="medidor">
                 ${medidor(fraccionDesgaste(m), m.estado)}
-                <div class="nombre">${m.tipo}</div>
-                <div class="dato">${textoFaltante(m)}</div>
+                <div class="nombre">${esc(m.tipo)}</div>
+                <div class="dato">${esc(textoFaltante(m))}</div>
                 <span class="chip ${m.estado}">${ICONOS[m.estado]} ${ETIQUETAS[m.estado]}</span>
               </div>`).join("")}
           </div>
@@ -411,7 +426,7 @@
             <summary>Bitácora de visitas (${v.historial.length})</summary>
             <div class="bitacora">
               ${v.historial.map(h =>
-                `<div><b>${h.fecha}</b> · ${h.kilometraje.toLocaleString("es-CO")} km${h.descripcion ? " · " + h.descripcion : ""}</div>`
+                `<div><b>${esc(h.fecha)}</b> · ${h.kilometraje.toLocaleString("es-CO")} km${h.descripcion ? " · " + esc(h.descripcion) : ""}</div>`
               ).join("")}
             </div>
           </details>` : ""}
@@ -475,7 +490,7 @@
       if (!citas.length) return;
       document.getElementById("zona-citas").style.display = "";
       document.getElementById("lista-citas").innerHTML = citas.map(c =>
-        `<div><b>${c.fecha}</b> · ${c.placa} · ${ETIQUETA_CITA[c.estado] || c.estado}${c.nota ? " · " + c.nota : ""}` +
+        `<div><b>${esc(c.fecha)}</b> · ${esc(c.placa)} · ${ETIQUETA_CITA[c.estado] || esc(c.estado)}${c.nota ? " · " + esc(c.nota) : ""}` +
         (["solicitada", "confirmada"].includes(c.estado)
           ? ` · <a href="#" onclick="cancelarCita(${c.id});return false;" style="color:#ef4444;">Cancelar</a>`
           : "") +

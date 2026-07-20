@@ -689,10 +689,17 @@
     }
 
     function escapar(texto) {
-      // Evita que un nombre con <etiquetas> rompa (o ataque) la página.
-      const div = document.createElement("div");
-      div.textContent = texto == null ? "" : String(texto);
-      return div.innerHTML;
+      // Evita que un nombre con <etiquetas> o comillas rompa (o ataque) la
+      // página. OJO: escapamos también las comillas (" y '), porque este
+      // texto se inserta DENTRO de atributos HTML (data-placa="...",
+      // tel:...); sin escaparlas, una placa con comillas podría inyectar
+      // un atributo malicioso (onmouseover=...). No basta con < y >.
+      return String(texto == null ? "" : texto)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
     }
 
     const fmtKm = n => Number(n).toLocaleString("es-CO");
