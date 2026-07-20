@@ -184,6 +184,19 @@
       <span class="led"></span><span id="btn-avisos-texto">Avisos</span>
     </button>
   </header>
+  <!-- Aviso solo para iPhone/iPad SIN instalar: sin "Agregar a inicio",
+       iOS no deja recibir notificaciones. Se oculta al instalar o al cerrar. -->
+  <div id="hint-ios" style="display:none;max-width:680px;margin:.75rem auto 0;
+       padding:.85rem 1rem;background:#0e2136;border:1px solid #1e40af;
+       border-radius:12px;color:#dbeafe;font-size:.86rem;line-height:1.5;">
+    <b style="color:#93c5fd;">📲 ¿Quieres recibir los avisos en tu iPhone?</b><br>
+    Toca el botón <b>Compartir</b> (el cuadrito con la flecha ↑) abajo, y luego
+    <b>“Agregar a inicio”</b>. Abre la app desde ese ícono y activa los avisos.
+    <button onclick="cerrarHintIOS()" style="margin-top:.5rem;background:none;
+      border:1px solid #334155;color:#94a3b8;border-radius:8px;padding:.3rem .7rem;
+      font-size:.78rem;cursor:pointer;">Entendido</button>
+  </div>
+
   <main id="contenido">
     <div class="aviso">Encendiendo el tablero…</div>
   </main>
@@ -406,9 +419,29 @@
         pintar(datos);
         cargarCitas();
         prepararAvisos();
+        revisarHintIOS();
       } catch (e) {
         contenido.innerHTML = `<div class="aviso">Sin conexión. Intenta cuando tengas internet.</div>`;
       }
+    }
+
+    // En iPhone/iPad, iOS solo entrega notificaciones si la PWA está
+    // "instalada" (Agregar a inicio). Si el cliente entró por Safari sin
+    // instalar, le mostramos cómo hacerlo. Se oculta al instalar o al cerrar.
+    function revisarHintIOS() {
+      const esIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+        // iPad moderno se hace pasar por Mac: lo delatan los toques táctiles.
+        || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const instalado = window.navigator.standalone === true
+        || window.matchMedia("(display-mode: standalone)").matches;
+      const yaCerrado = localStorage.getItem("hint_ios_cerrado") === "1";
+      if (esIOS && !instalado && !yaCerrado) {
+        document.getElementById("hint-ios").style.display = "block";
+      }
+    }
+    function cerrarHintIOS() {
+      localStorage.setItem("hint_ios_cerrado", "1");
+      document.getElementById("hint-ios").style.display = "none";
     }
 
     function pintar(datos) {
