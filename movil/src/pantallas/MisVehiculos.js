@@ -13,7 +13,8 @@ import {
 import * as api from '../api';
 import { intentarActivarUnaVez } from '../avisos';
 import { useTema } from '../apariencia';
-import { BandaEstado, CajaError, Cargando, Placa, Tarjeta } from '../componentes';
+import { BandaEstado, CajaError, Cargando, Placa, Tarjeta, TarjetaConsejo } from '../componentes';
+import { consejoDelDia } from '../consejos';
 import { useSesion } from '../sesion';
 import { ESPACIO, LETRA, RADIO, peorEstado } from '../tema';
 
@@ -77,6 +78,8 @@ export default function MisVehiculos({ navigation }) {
 
   const vehiculos = datos ? datos.vehiculos : [];
   const resumen = resumenGeneral(vehiculos);
+  // El dato curioso "del día": se calcula una vez por visita a la pantalla.
+  const consejo = useMemo(() => consejoDelDia(), []);
 
   return (
     <ScrollView
@@ -139,6 +142,9 @@ export default function MisVehiculos({ navigation }) {
       {vehiculos.length > 0 && (
         <Text style={estilos.pista}>Toca un vehículo para ver su detalle</Text>
       )}
+
+      {/* Dato curioso de mantenimiento: educa sin alarmar. */}
+      {datos && <TarjetaConsejo texto={consejo} />}
     </ScrollView>
   );
 }

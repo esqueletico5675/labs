@@ -167,6 +167,31 @@ export function Casilla({ texto, activo, alCambiar }) {
   );
 }
 
+// --- Tarjeta "¿Sabías que…?": un dato curioso de mantenimiento.
+//     Educa sin alarmar y SIEMPRE cierra invitando a consultar al taller
+//     (los kilómetros exactos varían por vehículo). ---
+export function TarjetaConsejo({ texto }) {
+  const { colores } = useTema();
+  if (!texto) return null;
+  return (
+    <View
+      style={[
+        estilos.consejo,
+        SOMBRA,
+        { backgroundColor: colores.tarjeta, borderLeftColor: colores.primario },
+      ]}
+    >
+      <Text style={[estilos.consejoTitulo, { color: colores.primario }]}>
+        💡 ¿Sabías que…?
+      </Text>
+      <Text style={[estilos.consejoTexto, { color: colores.texto }]}>{texto}</Text>
+      <Text style={[estilos.consejoPie, { color: colores.textoSuave }]}>
+        Consulta con tu taller para tu caso.
+      </Text>
+    </View>
+  );
+}
+
 // --- Caja de error: explica qué pasó y qué hacer, sin tecnicismos ---
 export function CajaError({ mensaje }) {
   const { colores } = useTema();
@@ -305,5 +330,25 @@ const estilos = StyleSheet.create({
     fontSize: LETRA.pequena,
     lineHeight: 20,
     fontWeight: '600',
+  },
+  consejo: {
+    borderRadius: RADIO.tarjeta,
+    borderLeftWidth: 4,
+    padding: ESPACIO.m,
+    marginBottom: ESPACIO.m,
+  },
+  consejoTitulo: {
+    fontSize: LETRA.pequena,
+    fontWeight: '800',
+    marginBottom: ESPACIO.xs,
+  },
+  consejoTexto: {
+    fontSize: LETRA.normal,
+    lineHeight: 24,
+  },
+  consejoPie: {
+    fontSize: LETRA.pequena,
+    fontStyle: 'italic',
+    marginTop: ESPACIO.s,
   },
 });
