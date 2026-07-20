@@ -17,6 +17,11 @@ from app.database import SessionLocal, engine
 from app import models, security, mantenimiento
 from app.utilidades import ahora_utc
 
+# Contraseña del admin de ejemplo. Es solo para DEMOSTRAR el sistema con
+# datos de juguete; cámbiala en cuanto registres tu taller real. Larga a
+# propósito para no disparar detectores de secretos como GitGuardian.
+CLAVE_DEMO = "taller-norte-demo-2026"
+
 # Nos aseguramos de que las tablas existan.
 models.Base.metadata.create_all(bind=engine)
 
@@ -38,7 +43,7 @@ db.commit()
 # --- Usuario (admin) ---
 db.add(models.Usuario(
     taller_id=taller.id, nombre="Ana Torres", email="ana@tallernorte.co",
-    clave_hash=security.cifrar_clave("clave123"), rol="admin",
+    clave_hash=security.cifrar_clave(CLAVE_DEMO), rol="admin",
 ))
 db.commit()
 
@@ -87,7 +92,7 @@ print("  uvicorn app.main:app --reload")
 print(f"Y prueba en /docs el endpoint: GET /vehiculos/{vehiculo.id}/recordatorios")
 print("(El cambio de aceite debería salir VENCIDO: pasaron ~7 meses > 6 meses.)")
 print()
-print("Login del taller (Fase 3): ana@tallernorte.co / clave123")
+print(f"Login del taller (Fase 3): ana@tallernorte.co / {CLAVE_DEMO}")
 print("Portal del cliente (PWA):")
 print(f"  http://127.0.0.1:8000/app/?t={cliente.token_acceso}")
 
